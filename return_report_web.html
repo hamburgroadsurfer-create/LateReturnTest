@@ -260,40 +260,10 @@
     return map;
   }
 
-  function getValue(row, candidates) {
-    for (const key of candidates) {
-      if (row[key] != null && row[key] !== '') return row[key];
-    }
-    return '';
-  }
-
-  function pickBySubstring(row, substring) {
-    const key = Object.keys(row).find((k) => k.includes(substring));
-    return key ? row[key] : '';
-  }
-
-  function normalizeDate(value) {
-    if (value == null || value === '') return '';
-    if (typeof value === 'number') {
-      const parsed = XLSX.SSF.parse_date_code(value);
-      if (parsed) {
-        const date = new Date(Date.UTC(parsed.y, parsed.m - 1, parsed.d));
-        return date.toISOString().slice(0, 10);
-      }
-    }
-    const asDate = new Date(value);
-    if (!Number.isNaN(asDate.getTime())) return asDate.toISOString().slice(0, 10);
-    return value.toString();
-  }
-
   function parseGnssRow(row) {
-    const vin = (getValue(row, ['vin', 'vehicle_id']) || pickBySubstring(row, 'vin')).toString().trim();
-    const lat = parseNumber(
-      getValue(row, ['gnss latitude', 'latitude', 'lat']) || pickBySubstring(row, 'latitude')
-    );
-    const lon = parseNumber(
-      getValue(row, ['gnss longitude', 'longitude', 'lon']) || pickBySubstring(row, 'longitude')
-    );
+    const vin = (row['vin'] || '').trim();
+    const lat = parseNumber(row['gnss latitude'] || row['latitude'] || row['lat']);
+    const lon = parseNumber(row['gnss longitude'] || row['longitude'] || row['lon']);
     if (!vin || Number.isNaN(lat) || Number.isNaN(lon)) return null;
     return { vin, lat, lon };
   }
@@ -351,11 +321,9 @@
       }
 
       const results = bookingRows.map((row) => {
-        const vin = (getValue(row, ['vehicle_id', 'vin']) || pickBySubstring(row, 'vin')).toString().trim();
-        const stationName = (getValue(row, ['station', 'return']) || pickBySubstring(row, 'station')).toString().trim();
-        const returnDate = normalizeDate(
-          getValue(row, ['booking return date', 'return date', 'date']) || pickBySubstring(row, 'return')
-        );
+        const vin = (row['vehicle_id'] || row['vin'] || '').trim();
+        const stationName = (row['station'] || row['return'] || '').trim();
+        const returnDate = row['booking return date'] || row['return date'] || row['date'] || '';
         const station = stationMap.get(stationName.toLowerCase());
         const gnss = latestGnss.get(vin);
         let distance = null;
