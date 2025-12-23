@@ -45,11 +45,11 @@ station_key,station_display,address,latitude,longitude
 "leipzig,Leipzig,""Kamenzer Str. 13, 04347 Leipzig"",51.3592094686168,12.4377840270493"
 "lindau_wangen,Lindau-Wangen,""Ebnetstraße 31, 88239 Wangen im Allgäu"",47.6859473389651,9.83841639809882"
 "lmc_caravan,LMC Caravan,""Rudolf-Diesel-Straße 4, 48336 Sassenberg"",51.9787843926708,8.06289234481134"
-"l�beck,L�beck,""Schmiedekoppel 28, 23847 Kastorf"",53.7510834041174,10.559496155964"
+"luebeck,L�beck,""Schmiedekoppel 28, 23847 Kastorf"",53.7510834041174,10.559496155964"
 "mainz,Mainz,""Hochheimer Str. 89, 55246 Wiesbaden"",50.0082020667002,8.30125525584245"
 "marburg,Marburg,""Afföllerstraße 90B, 35039 Marburg"",50.8289635251408,8.7711165405243"
 "munich,Munich,""Ingolstädter Str. 172, 80939 München"",48.2054594833753,11.586918825675"
-"n�rnberg,N�rnberg,""Benno-Strauß-Straße 45, 90763 Fürth"",49.4439155327726,10.9948355497419"
+"nuremberg,Nuernberg,""Benno-Strauß-Straße 45, 90763 Fürth"",49.4439155327726,10.9948355497419"
 "regensburg,Regensburg,""Berliner Str. 41A, 93073 Neutraubling"",48.9746637253456,12.1856846269741"
 "stuttgart,Stuttgart,""Ostheimer Weg 15, 70825 Korntal-Münchingen"",48.8292948855569,9.13241531162552"
 "trier,Trier,""Am Maarbach 7-9, 54329 Konz"",49.6844988192113,6.55663793041912"
@@ -94,3 +94,5 @@ station_key,station_display,address,latitude,longitude
 "seattle,Seattle,""3820 6th Ave S, Seattle, WA 98108, Vereinigte Staaten"",47.5692798810331,-122.326185728888"
 "calgary,Calgary,""9524 Horton Rd SW, Calgary, AB T2V 2X4, Kanada"",50.969913510738,-114.075005364562"
 "vancouver,Vancouver,""8211 Argyle St, Vancouver, BC V5P 4R4, Kanada"",49.2098504075739,-123.071514930613"
+miami,Miami, 2736 NW 37th St,25.7617,-80.1918
+phoenix,Phoenix, 2429 E Washington St,33.4099, -112.0792

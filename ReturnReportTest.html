@@ -1,0 +1,1295 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <title>Return Feasibility – Ampelcheck</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <style>
+    :root{
+      color-scheme: light dark;
+      --bg: #0b0f14;
+      --surface: rgba(255,255,255,0.06);
+      --surface2: rgba(255,255,255,0.09);
+      --border: rgba(255,255,255,0.14);
+      --text: rgba(255,255,255,0.92);
+      --muted: rgba(255,255,255,0.68);
+      --muted2: rgba(255,255,255,0.55);
+      --brand: #0b6efd;
+      --brand2: #1b8cff;
+      --ok: #198754;
+      --warn: #ffc107;
+      --bad: #dc3545;
+      --unk: #6c757d;
+      --shadow: 0 14px 40px rgba(0,0,0,.35);
+      --radius: 14px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    }
+
+    @media (prefers-color-scheme: light){
+      :root{
+        --bg: #f7f8fb;
+        --surface: #ffffff;
+        --surface2: #f2f5fb;
+        --border: rgba(0,0,0,0.10);
+        --text: rgba(0,0,0,0.88);
+        --muted: rgba(0,0,0,0.62);
+        --muted2: rgba(0,0,0,0.52);
+        --shadow: 0 10px 25px rgba(0,0,0,.08);
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body{
+      margin: 0;
+      font-family: var(--sans);
+      background: radial-gradient(1200px 800px at 20% -10%, rgba(11,110,253,0.22), transparent 55%),
+                  radial-gradient(900px 650px at 110% 10%, rgba(25,135,84,0.16), transparent 55%),
+                  var(--bg);
+      color: var(--text);
+    }
+
+    .wrap{
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 28px 16px 60px;
+    }
+
+    .topbar{
+      display:flex; align-items:center; justify-content:space-between;
+      gap: 12px; flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .brand{ display:flex; align-items:center; gap: 12px; }
+    .logo{
+      width: 42px; height: 42px; border-radius: 12px;
+      background: linear-gradient(135deg, var(--brand), var(--brand2));
+      box-shadow: var(--shadow);
+      display:grid; place-items:center;
+      color: white; font-weight: 900;
+      letter-spacing: .2px;
+      user-select:none;
+    }
+    h1{ margin: 0; font-size: 1.25rem; line-height: 1.15; }
+    .subtitle{ margin: 2px 0 0; color: var(--muted); font-size: 0.95rem; }
+
+    .pill{
+      display:inline-flex; align-items:center; gap: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: 999px;
+      padding: 8px 10px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .pill b{ color: var(--text); font-weight: 700; }
+
+    /* ✅ Results nach unten (Breitansicht) */
+    .grid{
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      align-items: start;
+    }
+
+    .card{
+      border: 1px solid var(--border);
+      background: var(--surface);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .card-h{
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between;
+      gap: 10px;
+      background: linear-gradient(180deg, rgba(255,255,255,.03), transparent);
+      flex-wrap: wrap;
+    }
+    .card-h h2{
+      margin: 0;
+      font-size: 1.05rem;
+      display:flex; align-items:center; gap: 10px;
+    }
+    .card-b{ padding: 16px; }
+
+    .step{
+      display:flex; gap: 12px; align-items:flex-start;
+      padding: 12px;
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      background: var(--surface2);
+      margin-bottom: 12px;
+    }
+    .step:last-child{ margin-bottom: 0; }
+    .step-no{
+      width: 30px; height: 30px;
+      border-radius: 10px;
+      background: rgba(11,110,253,0.18);
+      border: 1px solid rgba(11,110,253,0.35);
+      color: var(--text);
+      display:grid; place-items:center;
+      font-weight: 900;
+      flex: 0 0 auto;
+    }
+    .step-title{ margin: 0; font-weight: 800; }
+    .step-desc{ margin: 4px 0 0; color: var(--muted); font-size: 0.93rem; }
+
+    .row{
+      display:grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    }
+
+    .drop{
+      position: relative;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface);
+      padding: 12px;
+      transition: transform .08s ease, border-color .12s ease, background .12s ease;
+      min-height: 118px;
+    }
+    .drop.dragover{
+      border-color: rgba(11,110,253,0.65);
+      background: rgba(11,110,253,0.08);
+      transform: translateY(-1px);
+    }
+
+    .drop-top{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .drop label{
+      font-weight: 900;
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      margin: 0;
+      line-height: 1.15;
+    }
+
+    input[type="file"]{
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+      background: transparent;
+      color: var(--text);
+    }
+
+    .filemeta{
+      margin-top: 8px;
+      display:flex; gap: 8px; align-items:center; flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .badge{
+      display:inline-flex; align-items:center; gap: 6px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04);
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .controls{
+      display:flex; gap: 10px; flex-wrap: wrap; align-items:end;
+      margin-top: 14px;
+    }
+
+    .field{
+      display:flex; flex-direction:column; gap: 6px;
+      min-width: 190px;
+    }
+    .field label{ font-weight: 800; margin: 0; }
+    .field input, .field select{
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      outline: none;
+    }
+    .field small{ color: var(--muted2); }
+
+    .btns{ display:flex; gap: 10px; flex-wrap: wrap; align-items:center; }
+    button{
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      background: var(--surface2);
+      color: var(--text);
+      font-weight: 800;
+      transition: transform .06s ease, opacity .12s ease;
+    }
+    button:hover{ transform: translateY(-1px); }
+    button.primary{
+      border-color: rgba(11,110,253,0.6);
+      background: linear-gradient(135deg, var(--brand), var(--brand2));
+      color: white;
+    }
+    button:disabled{ opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .statusline{
+      margin-top: 10px;
+      display:flex; gap: 10px; align-items:center; flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .spinner{
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.25);
+      border-top-color: rgba(255,255,255,0.85);
+      animation: spin 0.9s linear infinite;
+      display: none;
+    }
+    @media (prefers-color-scheme: light){
+      .spinner{
+        border: 2px solid rgba(0,0,0,0.18);
+        border-top-color: rgba(0,0,0,0.65);
+      }
+    }
+    @keyframes spin{ to{ transform: rotate(360deg); } }
+
+    .error{
+      border: 1px solid rgba(220,53,69,0.55);
+      background: rgba(220,53,69,0.12);
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 14px;
+      margin-top: 12px;
+      display:none;
+      font-weight: 700;
+    }
+
+    .summary-grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin: 12px 0 0;
+    }
+    .summary-card{
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface2);
+    }
+    .summary-title{ display:flex; align-items:center; gap: 8px; font-weight: 900; }
+    .summary-value{ font-size: 1.6rem; margin-top: 4px; font-weight: 900; }
+    .summary-sub{ margin-top: 6px; color: var(--muted); font-size: 0.92rem; }
+
+    .status{
+      display:inline-flex;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-weight: 900;
+      color: white;
+      font-size: 0.82rem;
+      letter-spacing: 0.3px;
+      align-items:center;
+      gap: 8px;
+    }
+    .green{ background: var(--ok); }
+    .yellow{ background: var(--warn); color: #111; }
+    .red{ background: var(--bad); }
+    .unknown{ background: var(--unk); }
+
+    .tablewrap{ overflow:auto; border-radius: 14px; border: 1px solid var(--border); margin-top: 12px; }
+    table{ width: 100%; border-collapse: collapse; min-width: 1100px; }
+    th, td{
+      padding: 10px 10px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+      font-size: 0.95rem;
+    }
+    th{
+      position: sticky;
+      top: 0;
+      background: rgba(0,0,0,0.18);
+      backdrop-filter: blur(6px);
+      z-index: 1;
+      font-size: 0.9rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+    @media (prefers-color-scheme: light){
+      th{ background: rgba(255,255,255,0.75); }
+    }
+    tbody tr:hover{ background: rgba(11,110,253,0.06); }
+
+    details{
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: var(--surface2);
+      margin-top: 12px;
+    }
+    details summary{
+      cursor: pointer;
+      font-weight: 900;
+      color: var(--text);
+      list-style: none;
+    }
+    details summary::-webkit-details-marker{ display:none; }
+
+    .muted{ color: var(--muted); }
+    .small{ font-size: 0.92rem; }
+    .right{ display:flex; gap: 8px; align-items:center; flex-wrap: wrap; }
+    .linkbtn{
+      border-color: rgba(11,110,253,0.45);
+      background: rgba(11,110,253,0.10);
+    }
+    .mono{ font-family: var(--mono); font-size: 0.87rem; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo">RF</div>
+        <div>
+          <h1>Return Feasibility – Ampelcheck</h1>
+          <div class="subtitle">Alles läuft lokal im Browser. Keine Installation, keine Admin-Rechte, keine Datenübertragung.</div>
+        </div>
+      </div>
+
+      <div class="right">
+        <span class="pill">Stations-Cache: <b id="cacheState">leer</b></span>
+        <button id="downloadTemplatesBtn" class="linkbtn" type="button">Templates herunterladen</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- INPUTS -->
+      <div class="card">
+        <div class="card-h">
+          <h2>📁 Dateien & Einstellungen</h2>
+          <span class="badge">CSV/XLSX</span>
+        </div>
+        <div class="card-b">
+
+          <div class="step">
+            <div class="step-no">1</div>
+            <div>
+              <p class="step-title">Dateien auswählen (oder per Drag&Drop)</p>
+              <p class="step-desc">Wir matchen Booking-Station → Stations-Koordinaten und vergleichen mit GNSS-Position pro VIN.</p>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top: 12px;">
+            <div class="drop" data-drop="booking">
+              <div class="drop-top">
+                <label for="bookingFile">📌 Booking Return</label>
+                <span class="badge">Pflicht</span>
+              </div>
+              <input id="bookingFile" type="file" accept=".csv,.xlsx" />
+              <div class="filemeta" id="bookingMeta">Keine Datei gewählt.</div>
+            </div>
+
+            <div class="drop" data-drop="stations">
+              <div class="drop-top">
+                <label for="stationFile">🏁 Stations</label>
+                <span class="badge">1× Upload → Cache</span>
+              </div>
+              <input id="stationFile" type="file" accept=".csv,.xlsx" />
+              <div class="filemeta" id="stationMeta">Keine Datei gewählt (Cache wird genutzt, falls vorhanden).</div>
+            </div>
+
+            <div class="drop" data-drop="gnss">
+              <div class="drop-top">
+                <label for="gnssFile">🛰️ Power BI / TCU Export</label>
+                <span class="badge">Pflicht</span>
+              </div>
+              <input id="gnssFile" type="file" accept=".csv,.xlsx" />
+              <div class="filemeta" id="gnssMeta">Keine Datei gewählt.</div>
+            </div>
+          </div>
+
+          <details>
+            <summary>ℹ️ Was bedeutet die Ampel?</summary>
+            <div class="muted small" style="margin-top:8px;">
+              <div><span class="status green">GRÜN</span> ≤ „Grün bis“ km</div>
+              <div style="margin-top:6px;"><span class="status yellow">GELB</span> ≤ „Gelb bis“ km</div>
+              <div style="margin-top:6px;"><span class="status red">ROT</span> > „Gelb bis“ km</div>
+              <div style="margin-top:6px;"><span class="status unknown">UNKNOWN</span> fehlende Station / GNSS / GNSS zu alt</div>
+            </div>
+          </details>
+
+          <div class="step" style="margin-top: 12px;">
+            <div class="step-no">2</div>
+            <div>
+              <p class="step-title">Schwellwerte festlegen</p>
+              <p class="step-desc">Grün = „sicher“, Gelb = „prüfen“, Rot = „kritisch“.</p>
+            </div>
+          </div>
+
+          <div class="controls">
+            <div class="field">
+              <label for="greenThreshold">Grün bis (km)</label>
+              <input id="greenThreshold" type="number" value="200" min="1" max="2000" />
+              <small class="muted">Empfehlung: 100–300 km</small>
+            </div>
+            <div class="field">
+              <label for="yellowThreshold">Gelb bis (km)</label>
+              <input id="yellowThreshold" type="number" value="1000" min="1" max="5000" />
+              <small class="muted">Empfehlung: 800–1500 km</small>
+            </div>
+
+            <div class="btns">
+              <button id="generateBtn" class="primary" type="button">Ampel berechnen</button>
+              <button id="downloadBtn" disabled type="button">Report als CSV</button>
+              <div class="statusline">
+                <div class="spinner" id="spinner"></div>
+                <span id="statusMsg" class="muted">Bereit.</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="errorBox" class="error"></div>
+        </div>
+      </div>
+
+      <!-- RESULTS -->
+      <div class="card">
+        <div class="card-h">
+          <h2>📊 Ergebnis</h2>
+          <div class="field" style="min-width: 220px;">
+            <label for="statusFilter">Filter</label>
+            <select id="statusFilter">
+              <option value="all">Alle Status</option>
+              <option value="red">Nur rot</option>
+              <option value="yellow">Nur gelb</option>
+              <option value="green">Nur grün</option>
+              <option value="unknown">Unknown</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card-b">
+          <div id="summary" class="summary-grid muted">
+            <div class="summary-card">
+              <div class="summary-title">Noch keine Daten</div>
+              <div class="summary-sub">Bitte Dateien wählen und „Ampel berechnen“ klicken.</div>
+            </div>
+          </div>
+
+          <div id="tableHost" class="muted" style="margin-top: 10px;">
+            Noch keine Berechnung ausgeführt.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const bookingInput = document.getElementById('bookingFile');
+  const stationInput = document.getElementById('stationFile');
+  const gnssInput = document.getElementById('gnssFile');
+  const generateBtn = document.getElementById('generateBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const downloadTemplatesBtn = document.getElementById('downloadTemplatesBtn');
+
+  const statusMsg = document.getElementById('statusMsg');
+  const spinner = document.getElementById('spinner');
+
+  const tableHost = document.getElementById('tableHost');
+  const errorBox = document.getElementById('errorBox');
+  const summary = document.getElementById('summary');
+  const statusFilter = document.getElementById('statusFilter');
+  const greenThreshold = document.getElementById('greenThreshold');
+  const yellowThreshold = document.getElementById('yellowThreshold');
+  const cacheState = document.getElementById('cacheState');
+
+  const bookingMeta = document.getElementById('bookingMeta');
+  const stationMeta = document.getElementById('stationMeta');
+  const gnssMeta = document.getElementById('gnssMeta');
+
+  let lastReport = [];
+  let stationRowsCache = null;
+
+  // ✅ Regel: GNSS muss mind. "gestern" (relativ zum Return-Datum) ein Signal haben
+  // Default: 24h. (Wenn du großzügiger willst: 36 oder 48)
+  const GNSS_MAX_AGE_HOURS_RELATIVE_TO_RETURN = 24;
+
+  // Stations Cache laden
+  try {
+    const rawStations = localStorage.getItem('returnTool_stations_runtime_v2');
+    if (rawStations) {
+      stationRowsCache = JSON.parse(rawStations);
+      cacheState.textContent = 'aktiv';
+      statusMsg.textContent = 'Stations aus Browser-Cache geladen (optional neu auswählen).';
+    } else {
+      cacheState.textContent = 'leer';
+    }
+  } catch (e) {
+    cacheState.textContent = 'leer';
+  }
+
+  // ===== Helpers =====
+  function normalizeHeader(key) {
+    return (key ?? '')
+      .toString()
+      .replace(/\ufeff/g, '')
+      .trim()
+      .toLowerCase()
+      .replace(/[;:]+$/g, '');
+  }
+
+  function parseNumber(value) {
+    if (typeof value === 'number') return value;
+    if (value == null || value === '') return NaN;
+    const normalized = value.toString().trim().replace(',', '.');
+    const parsed = Number.parseFloat(normalized);
+    return Number.isFinite(parsed) ? parsed : NaN;
+  }
+
+  function slugifyStation(value) {
+    if (!value) return '';
+    let s = value.toString().trim().toLowerCase();
+    s = s.replace(/\(.*?\)/g, '');
+    s = s.replace(/ß/g, 'ss');
+    s = s.replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue');
+    s = s.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+    s = s.replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    return s;
+  }
+
+  function splitCsvLine(line) {
+    const out = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQuotes && line[i+1] === '"') { cur += '"'; i++; }
+        else inQuotes = !inQuotes;
+      } else if (ch === ',' && !inQuotes) {
+        out.push(cur);
+        cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    out.push(cur);
+    return out.map(s => s.trim());
+  }
+
+  function haversineKm(lat1, lon1, lat2, lon2) {
+    const toRad = (v) => (v * Math.PI) / 180;
+    const R = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  function classify(distance, thresholds) {
+    if (distance == null || Number.isNaN(distance)) {
+      return { status: 'unknown', label: 'keine/ungültige Positionsdaten' };
+    }
+    if (distance <= thresholds.green) return { status: 'green', label: `${distance.toFixed(1)} km` };
+    if (distance <= thresholds.yellow) return { status: 'yellow', label: `${distance.toFixed(1)} km` };
+    return { status: 'red', label: `${distance.toFixed(1)} km` };
+  }
+
+  function normalizeDate(value) {
+    if (value == null || value === '') return '';
+
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      const parsed = XLSX.SSF.parse_date_code(value);
+      if (parsed) {
+        const date = new Date(Date.UTC(parsed.y, parsed.m - 1, parsed.d));
+        return date.toISOString().slice(0, 10);
+      }
+    }
+
+    const s = value.toString().trim();
+
+    if (/^[0-9]+(\.[0-9]+)?$/.test(s)) {
+      const num = Number.parseFloat(s);
+      if (Number.isFinite(num) && num > 20000) {
+        const parsed = XLSX.SSF.parse_date_code(num);
+        if (parsed) {
+          const date = new Date(Date.UTC(parsed.y, parsed.m - 1, parsed.d));
+          return date.toISOString().slice(0, 10);
+        }
+      }
+    }
+
+    let m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+    if (m) {
+      const date = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+      if (!Number.isNaN(date.getTime())) return date.toISOString().slice(0, 10);
+    }
+
+    m = /^(\d{1,2})[./](\d{1,2})[./](\d{2,4})$/.exec(s);
+    if (m) {
+      let d = Number(m[1]);
+      let mo = Number(m[2]) - 1;
+      let y = Number(m[3]);
+      if (y < 100) y += 2000;
+      const date = new Date(Date.UTC(y, mo, d));
+      if (!Number.isNaN(date.getTime())) return date.toISOString().slice(0, 10);
+    }
+
+    const asDate = new Date(s);
+    if (!Number.isNaN(asDate.getTime())) return asDate.toISOString().slice(0, 10);
+    return s;
+  }
+
+  function getValue(row, candidates) {
+    for (const key of candidates) {
+      if (row[key] != null && row[key] !== '') return row[key];
+    }
+    return '';
+  }
+
+  function pickBySubstring(row, substring) {
+    const key = Object.keys(row).find((k) => k.includes(substring));
+    return key ? row[key] : '';
+  }
+
+  // ✅ Timestamp Parsing (Battery Timestamp etc.)
+  function parseTimestampToMs(value) {
+    if (value == null || value === '') return NaN;
+
+    // Excel serial
+    if (typeof value === 'number' && Number.isFinite(value) && value > 20000) {
+      const parsed = XLSX.SSF.parse_date_code(value);
+      if (parsed) return Date.UTC(parsed.y, parsed.m - 1, parsed.d, parsed.H || 0, parsed.M || 0, parsed.S || 0);
+    }
+
+    const s = value.toString().trim();
+    if (!s) return NaN;
+
+    // pure number: unix seconds/ms or excel-like
+    if (/^[0-9]+(\.[0-9]+)?$/.test(s)) {
+      const num = Number.parseFloat(s);
+      if (!Number.isFinite(num)) return NaN;
+
+      // unix ms
+      if (num > 1e12) return Math.floor(num);
+      // unix seconds
+      if (num > 1e9) return Math.floor(num * 1000);
+      // excel serial fallback
+      if (num > 20000) {
+        const parsed = XLSX.SSF.parse_date_code(num);
+        if (parsed) return Date.UTC(parsed.y, parsed.m - 1, parsed.d, parsed.H || 0, parsed.M || 0, parsed.S || 0);
+      }
+    }
+
+    // dd.mm.yyyy [hh:mm[:ss]]
+    let m = /^(\d{1,2})[./](\d{1,2})[./](\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/.exec(s);
+    if (m) {
+      const d = Number(m[1]);
+      const mo = Number(m[2]) - 1;
+      let y = Number(m[3]);
+      if (y < 100) y += 2000;
+      const hh = m[4] ? Number(m[4]) : 0;
+      const mm = m[5] ? Number(m[5]) : 0;
+      const ss = m[6] ? Number(m[6]) : 0;
+      const ms = Date.UTC(y, mo, d, hh, mm, ss);
+      if (!Number.isNaN(ms)) return ms;
+    }
+
+    // ISO / normal Date.parse
+    const ms = Date.parse(s);
+    return Number.isFinite(ms) ? ms : NaN;
+  }
+
+  function formatDateTime(ms) {
+    if (!Number.isFinite(ms)) return '';
+    const d = new Date(ms);
+    // ISO-ish but readable
+    const yyyy = d.getUTCFullYear();
+    const mm = String(d.getUTCMonth()+1).padStart(2,'0');
+    const dd = String(d.getUTCDate()).padStart(2,'0');
+    const hh = String(d.getUTCHours()).padStart(2,'0');
+    const mi = String(d.getUTCMinutes()).padStart(2,'0');
+    return `${yyyy}-${mm}-${dd} ${hh}:${mi}Z`;
+  }
+
+  function parseISODateToUtcMs(dateStr) {
+    if (!dateStr) return NaN;
+    // expect YYYY-MM-DD from normalizeDate
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+    if (!m) return NaN;
+    return Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 0, 0, 0);
+  }
+
+  function isGnssFreshRelativeToReturn(gnssMs, returnDateStr) {
+    if (!Number.isFinite(gnssMs)) return false;
+
+    const returnMs = parseISODateToUtcMs(returnDateStr);
+    let refMs = returnMs;
+
+    // fallback: today UTC midnight if return date missing
+    if (!Number.isFinite(refMs)) {
+      const now = new Date();
+      refMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0);
+    }
+
+    const cutoff = refMs - GNSS_MAX_AGE_HOURS_RELATIVE_TO_RETURN * 3600 * 1000;
+    return gnssMs >= cutoff;
+  }
+
+  // ===== CSV parsing: delimiter auto-detect =====
+  async function readAsText(file) { return await file.text(); }
+
+  function detectDelimiter(text) {
+    const lines = text.split(/\r?\n/).filter(l => l.trim().length);
+    if (!lines.length) return ',';
+    const line = lines[0];
+    const semis = (line.match(/;/g) || []).length;
+    const commas = (line.match(/,/g) || []).length;
+    return semis > commas ? ';' : ',';
+  }
+
+  function sheetToJson(workbook) {
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    if (!rows.length) return [];
+    const headers = rows[0].map(normalizeHeader);
+    return rows.slice(1).map((row) => {
+      const obj = {};
+      headers.forEach((key, idx) => { obj[key] = row[idx] ?? ''; });
+      return obj;
+    });
+  }
+
+  function parseCsvText(text) {
+    const delim = detectDelimiter(text);
+    const wb = XLSX.read(text, { type: 'string', raw: true, FS: delim });
+    return sheetToJson(wb);
+  }
+
+  async function parseFile(file) {
+    const name = (file.name || '').toLowerCase();
+    if (name.endsWith('.csv')) {
+      const text = await readAsText(file);
+      return parseCsvText(text);
+    }
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: 'array' });
+    return sheetToJson(workbook);
+  }
+
+  function unpackRowIfPacked(row, keys) {
+    const packed = (row[keys.a] ?? '').toString();
+    const others = [keys.b, keys.c, keys.d, keys.e].filter(Boolean);
+    const hasOther = others.some(k => (row[k] ?? '').toString().trim() !== '');
+    if (!packed || hasOther) return row;
+
+    if (packed.includes(',') && packed.length > 10) {
+      const parts = splitCsvLine(packed);
+      if (parts.length >= 4) {
+        const r2 = { ...row };
+        r2[keys.a] = parts[0] ?? '';
+        if (keys.b) r2[keys.b] = parts[1] ?? '';
+        if (keys.c) r2[keys.c] = parts[2] ?? '';
+        if (keys.d) r2[keys.d] = parts[3] ?? '';
+        if (keys.e) r2[keys.e] = parts[4] ?? '';
+        return r2;
+      }
+    }
+    return row;
+  }
+
+  // ===== Stations runtime =====
+  function makeStationMap(stationRows) {
+    const map = new Map();
+
+    stationRows.forEach((r0) => {
+      const r = unpackRowIfPacked(r0, { a:'station_key', b:'station_display', c:'address', d:'latitude', e:'longitude' });
+
+      const key = (getValue(r, ['station_key']) || '').toString().trim().toLowerCase();
+      const display = (getValue(r, ['station_display']) || key).toString().trim();
+      const lat = parseNumber(getValue(r, ['latitude']));
+      const lon = parseNumber(getValue(r, ['longitude']));
+      if (!key || Number.isNaN(lat) || Number.isNaN(lon)) return;
+
+      map.set(key, { lat, lon, display });
+
+      const slugDisp = slugifyStation(display);
+      if (slugDisp && !map.has(slugDisp)) map.set(slugDisp, { lat, lon, display });
+
+      const addr = getValue(r, ['address']);
+      if (addr) {
+        const slugAddr = slugifyStation(addr);
+        if (slugAddr && !map.has(slugAddr)) map.set(slugAddr, { lat, lon, display });
+      }
+    });
+
+    return map;
+  }
+
+  function cacheStations(rows) {
+    stationRowsCache = rows;
+    try {
+      localStorage.setItem('returnTool_stations_runtime_v2', JSON.stringify(rows));
+      cacheState.textContent = 'aktiv';
+    } catch (e) {}
+  }
+
+  // ===== GNSS Parsing (inkl. Timestamp) =====
+  function parseGnssRow(row0) {
+    let row = row0;
+    if ((row0.vin ?? '').toString().includes(',') && !(row0.latitude || row0.lon || row0.longitude)) {
+      row = unpackRowIfPacked(row0, { a:'vin', b:'latitude', c:'longitude' });
+    }
+
+    const vin = (getValue(row, ['vin', 'vehicle_id']) || pickBySubstring(row, 'vin')).toString().trim();
+
+    const lat = parseNumber(
+      getValue(row, ['gnss latitude', 'gnss_latitude', 'gnss_log_lat', 'latitude', 'lat']) ||
+      pickBySubstring(row, 'latitude')
+    );
+    const lon = parseNumber(
+      getValue(row, ['gnss longitude', 'gnss_longitude', 'gnss_log_lon', 'longitude', 'lon']) ||
+      pickBySubstring(row, 'longitude')
+    );
+
+    // ✅ Timestamp candidates (Battery Timestamp bevorzugt)
+    const tsRaw =
+      getValue(row, [
+        'battery timestamp',
+        'battery_timestamp',
+        'batteryts',
+        'battery ts',
+        'battery_time',
+        'battery time',
+        'gnss timestamp',
+        'gnss_timestamp',
+        'gps timestamp',
+        'gps_timestamp',
+        'timestamp',
+        'time',
+        'datetime',
+        'date time'
+      ]) || pickBySubstring(row, 'battery timestamp') || pickBySubstring(row, 'timestamp');
+
+    const tsMs = parseTimestampToMs(tsRaw);
+
+    if (!vin || Number.isNaN(lat) || Number.isNaN(lon)) return null;
+    return { vin, lat, lon, tsMs, tsRaw };
+  }
+
+  // ✅ take the newest GNSS per VIN (by timestamp)
+  function makeGnssMap(rows) {
+    const map = new Map();
+    rows.forEach((row) => {
+      const parsed = parseGnssRow(row);
+      if (!parsed) return;
+
+      const existing = map.get(parsed.vin);
+      if (!existing) {
+        map.set(parsed.vin, parsed);
+        return;
+      }
+
+      const a = existing.tsMs;
+      const b = parsed.tsMs;
+
+      // if both timestamps exist -> keep newest
+      if (Number.isFinite(a) && Number.isFinite(b)) {
+        if (b > a) map.set(parsed.vin, parsed);
+        return;
+      }
+
+      // if only new has timestamp -> prefer it
+      if (!Number.isFinite(a) && Number.isFinite(b)) {
+        map.set(parsed.vin, parsed);
+        return;
+      }
+
+      // else keep existing
+    });
+    return map;
+  }
+
+  function filterRows(rows) {
+    if (statusFilter.value === 'all') return rows;
+    return rows.filter((row) => row.status === statusFilter.value);
+  }
+
+  // ===== Rendering =====
+  function renderSummary(rows) {
+    if (!rows.length) {
+      summary.innerHTML = `
+        <div class="summary-card">
+          <div class="summary-title">Noch keine Daten</div>
+          <div class="summary-sub">Bitte Dateien wählen und „Ampel berechnen“ klicken.</div>
+        </div>`;
+      return;
+    }
+
+    const counts = rows.reduce((acc, row) => {
+      acc[row.status] = (acc[row.status] || 0) + 1;
+      acc.total += 1;
+      return acc;
+    }, { total: 0 });
+
+    const statusOrder = [
+      { key: 'red', label: 'ROT', className: 'red' },
+      { key: 'yellow', label: 'GELB', className: 'yellow' },
+      { key: 'green', label: 'GRÜN', className: 'green' },
+      { key: 'unknown', label: 'UNKNOWN', className: 'unknown' },
+    ];
+
+    const cards = [];
+    cards.push(`
+      <div class="summary-card">
+        <div class="summary-title">Gesamt</div>
+        <div class="summary-value">${counts.total}</div>
+        <div class="summary-sub">Fahrzeuge ausgewertet</div>
+      </div>
+    `);
+
+    statusOrder.forEach(({ key, label, className }) => {
+      const value = counts[key] || 0;
+      cards.push(`
+        <div class="summary-card">
+          <div class="summary-title"><span class="status ${className}">${label}</span></div>
+          <div class="summary-value">${value}</div>
+        </div>
+      `);
+    });
+
+    const reasonCounts = {};
+    rows.filter(r => r.status === 'unknown').forEach(r => {
+      const k = r.debug || 'Unbekannt';
+      reasonCounts[k] = (reasonCounts[k] || 0) + 1;
+    });
+
+    if (Object.keys(reasonCounts).length) {
+      const debugLines = Object.entries(reasonCounts)
+        .sort((a,b) => b[1] - a[1])
+        .slice(0, 12)
+        .map(([reason, count]) => `<div>${count}× ${reason}</div>`)
+        .join('');
+      cards.push(`
+        <div class="summary-card">
+          <div class="summary-title">Debug (UNKNOWN)</div>
+          <div class="summary-sub" style="margin-top:8px; line-height:1.35;">${debugLines}</div>
+        </div>
+      `);
+    }
+
+    summary.innerHTML = cards.join('');
+  }
+
+  function renderTable(rows) {
+    const filtered = filterRows(rows);
+    if (!filtered.length) {
+      tableHost.innerHTML = rows.length
+        ? '<div class="muted">Keine Einträge für den aktuellen Filter.</div>'
+        : '<div class="muted">Keine Daten berechnet.</div>';
+      return;
+    }
+
+    const html = [];
+    html.push(`<div class="tablewrap"><table>
+      <thead><tr>
+        <th>Status</th>
+        <th>VIN</th>
+        <th>Booking-Station</th>
+        <th>Matched Station</th>
+        <th>Distanz</th>
+        <th>Aktuelle Position</th>
+        <th>GNSS Zeit</th>
+        <th>Rückgabedatum</th>
+        <th>Debug</th>
+      </tr></thead><tbody>`);
+
+    filtered.forEach((row) => {
+      html.push(`<tr>
+        <td><span class="status ${row.status}">${row.status.toUpperCase()}</span></td>
+        <td class="mono">${row.vin || ''}</td>
+        <td>${row.station || ''}</td>
+        <td>${row.stationMatched || ''}</td>
+        <td>${row.distanceLabel}</td>
+        <td class="mono">${row.location || ''}</td>
+        <td class="mono">${row.gnssTime || ''}</td>
+        <td>${row.returnDate || ''}</td>
+        <td class="small muted">${row.debug || ''}</td>
+      </tr>`);
+    });
+
+    html.push('</tbody></table></div>');
+    tableHost.innerHTML = html.join('');
+  }
+
+  function downloadCsv(rows) {
+    const header = [
+      'status','vin','station_booking','station_matched',
+      'distance_km','location_lat','location_lon',
+      'gnss_timestamp','gnss_age_days',
+      'return_date','debug'
+    ];
+    const esc = (v) => {
+      const s = (v ?? '').toString();
+      if (/[,"\n;]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+    const lines = [header.join(',')];
+    rows.forEach((r) => {
+      lines.push([
+        esc(r.status), esc(r.vin), esc(r.station), esc(r.stationMatched),
+        esc(r.distanceKm), esc(r.lat), esc(r.lon),
+        esc(r.gnssTime), esc(r.gnssAgeDays),
+        esc(r.returnDate), esc(r.debug)
+      ].join(','));
+    });
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'return_report.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function setBusy(on, msg) {
+    spinner.style.display = on ? 'inline-block' : 'none';
+    statusMsg.textContent = msg || (on ? 'Arbeite…' : 'Bereit.');
+    generateBtn.disabled = on;
+  }
+
+  function setError(msg) {
+    errorBox.textContent = msg;
+    errorBox.style.display = msg ? 'block' : 'none';
+  }
+
+  async function generateReport() {
+    setError('');
+    tableHost.innerHTML = '<div class="muted">Berechne …</div>';
+    setBusy(true, 'Dateien werden gelesen…');
+
+    try {
+      if (!bookingInput.files.length || !gnssInput.files.length) {
+        throw new Error('Bitte Booking-Datei UND GNSS-Datei auswählen.');
+      }
+
+      const bookingRows = await parseFile(bookingInput.files[0]);
+
+      let stationRows;
+      if (stationInput.files.length) {
+        stationRows = await parseFile(stationInput.files[0]);
+        cacheStations(stationRows);
+      } else if (stationRowsCache) {
+        stationRows = stationRowsCache;
+      } else {
+        throw new Error('Bitte Stations-Datei einmal hochladen (stations_runtime.csv).');
+      }
+
+      const gnssRows = await parseFile(gnssInput.files[0]);
+
+      const stationMap = makeStationMap(stationRows);
+      const latestGnss = makeGnssMap(gnssRows);
+
+      const thresholds = {
+        green: parseNumber(greenThreshold.value),
+        yellow: parseNumber(yellowThreshold.value),
+      };
+      if (Number.isNaN(thresholds.green) || Number.isNaN(thresholds.yellow) || thresholds.green >= thresholds.yellow) {
+        throw new Error('Bitte gültige Schwellwerte eingeben (grün < gelb).');
+      }
+
+      setBusy(true, 'Match & Distanzberechnung…');
+
+      let staleCount = 0;
+      let noTsCount = 0;
+
+      const results = bookingRows.map((row) => {
+        const vin = (getValue(row, ['vin','vehicle_id']) || pickBySubstring(row, 'vin')).toString().trim();
+        const stationBooking = (getValue(row, ['station']) || pickBySubstring(row, 'station')).toString().trim();
+        const returnDate = normalizeDate(getValue(row, ['booking return date','return date','date']) || pickBySubstring(row,'return'));
+
+        const stationKey1 = stationBooking.toLowerCase();
+        const stationKey2 = slugifyStation(stationBooking);
+        const station = stationMap.get(stationKey1) || stationMap.get(stationKey2);
+
+        const gnss = vin ? latestGnss.get(vin) : undefined;
+
+        const debug = [];
+        if (!station) debug.push(`Station nicht gefunden (booking="${stationBooking}", try="${stationKey2}")`);
+        if (!vin) debug.push('VIN fehlt');
+
+        // ✅ GNSS freshness check (Battery Timestamp)
+        let gnssFresh = true;
+        let gnssTime = '';
+        let gnssAgeDays = '';
+
+        if (vin && !gnss) {
+          debug.push('Keine GNSS-Position für VIN');
+          gnssFresh = false;
+        } else if (gnss) {
+          if (!Number.isFinite(gnss.tsMs)) {
+            // no timestamp -> treat as stale/unknown (safer)
+            gnssFresh = false;
+            noTsCount += 1;
+            debug.push('GNSS Timestamp fehlt (Battery Timestamp nicht gefunden)');
+          } else {
+            gnssTime = formatDateTime(gnss.tsMs);
+            const refMs = Number.isFinite(parseISODateToUtcMs(returnDate))
+              ? parseISODateToUtcMs(returnDate)
+              : Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 0, 0, 0);
+
+            const ageDays = (refMs - gnss.tsMs) / (24 * 3600 * 1000);
+            gnssAgeDays = Number.isFinite(ageDays) ? ageDays.toFixed(2) : '';
+
+            gnssFresh = isGnssFreshRelativeToReturn(gnss.tsMs, returnDate);
+            if (!gnssFresh) {
+              staleCount += 1;
+              debug.push(`GNSS zu alt: ${gnssTime} (>${GNSS_MAX_AGE_HOURS_RELATIVE_TO_RETURN}h vor Return)`);
+            }
+          }
+        }
+
+        let distance = null;
+        if (station && gnss && gnssFresh) {
+          distance = haversineKm(station.lat, station.lon, gnss.lat, gnss.lon);
+        }
+
+        // if GNSS missing/old -> force unknown
+        let classification = classify(distance, thresholds);
+        if (!gnssFresh) classification = { status: 'unknown', label: 'GNSS zu alt/fehlt' };
+
+        return {
+          status: classification.status,
+          vin,
+          station: stationBooking,
+          stationMatched: station ? station.display : '',
+          distanceKm: distance != null && !Number.isNaN(distance) ? distance.toFixed(2) : '',
+          distanceLabel: classification.label,
+          lat: (gnss && gnssFresh) ? (gnss.lat ?? '') : '',
+          lon: (gnss && gnssFresh) ? (gnss.lon ?? '') : '',
+          location: (gnss && gnssFresh) ? `${gnss.lat.toFixed(5)}, ${gnss.lon.toFixed(5)}` : '–',
+          gnssTime,
+          gnssAgeDays,
+          returnDate,
+          debug: debug.join(' | ')
+        };
+      });
+
+      const order = { red: 0, yellow: 1, green: 2, unknown: 3 };
+      results.sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
+
+      lastReport = results;
+      renderSummary(results);
+      renderTable(results);
+
+      downloadBtn.disabled = !results.length;
+
+      const infoBits = [];
+      if (staleCount) infoBits.push(`${staleCount}× GNSS zu alt`);
+      if (noTsCount) infoBits.push(`${noTsCount}× GNSS ohne Timestamp`);
+      const extra = infoBits.length ? ` · (${infoBits.join(', ')})` : '';
+
+      setBusy(false, `Fertig: ${results.length} Fahrzeuge · Stations: ${stationMap.size} · GNSS: ${latestGnss.size}${extra}`);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || String(err));
+      tableHost.innerHTML = '<div class="muted">Fehler beim Verarbeiten.</div>';
+      setBusy(false, 'Bereit.');
+    }
+  }
+
+  // ===== UX: File metas =====
+  function setMeta(el, file) {
+    if (!file) { el.textContent = 'Keine Datei gewählt.'; return; }
+    el.innerHTML = `<span class="badge">📄 ${file.name}</span><span class="badge">≈ ${(file.size/1024).toFixed(0)} KB</span>`;
+  }
+
+  bookingInput.addEventListener('change', () => setMeta(bookingMeta, bookingInput.files[0]));
+  stationInput.addEventListener('change', () => {
+    setMeta(stationMeta, stationInput.files[0]);
+    if (stationInput.files.length) statusMsg.textContent = 'Stations wird nach dem Lauf im Cache gespeichert.';
+  });
+  gnssInput.addEventListener('change', () => setMeta(gnssMeta, gnssInput.files[0]));
+
+  // ===== Drag & Drop =====
+  function wireDrop(zoneKey, input) {
+    const zone = document.querySelector(`.drop[data-drop="${zoneKey}"]`);
+    if (!zone) return;
+
+    const onDrag = (e) => { e.preventDefault(); zone.classList.add('dragover'); };
+    const onLeave = () => zone.classList.remove('dragover');
+    const onDrop = (e) => {
+      e.preventDefault();
+      zone.classList.remove('dragover');
+      const file = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!file) return;
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      input.files = dt.files;
+      input.dispatchEvent(new Event('change'));
+    };
+
+    zone.addEventListener('dragenter', onDrag);
+    zone.addEventListener('dragover', onDrag);
+    zone.addEventListener('dragleave', onLeave);
+    zone.addEventListener('drop', onDrop);
+  }
+  wireDrop('booking', bookingInput);
+  wireDrop('stations', stationInput);
+  wireDrop('gnss', gnssInput);
+
+  // ===== Templates =====
+  function downloadTextFile(name, content) {
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  downloadTemplatesBtn.addEventListener('click', () => {
+    const bookingTpl =
+      'vin,station,booking return date\n' +
+      'WVWZZZ00000000000,Hamburg,2025-12-23\n';
+    const stationsTpl =
+      'station_key,station_display,address,latitude,longitude\n' +
+      'hamburg,Hamburg,"Musterstraße 1, 20095 Hamburg",53.5511,9.9937\n';
+    const gnssTpl =
+      'vin,latitude,longitude,battery timestamp\n' +
+      'WVWZZZ00000000000,53.55,10.01,2025-12-22 20:15:00\n';
+
+    downloadTextFile('template_booking.csv', bookingTpl);
+    downloadTextFile('template_stations_runtime.csv', stationsTpl);
+    downloadTextFile('template_gnss.csv', gnssTpl);
+  });
+
+  // ===== Wiring =====
+  generateBtn.addEventListener('click', generateReport);
+  downloadBtn.addEventListener('click', () => { if (lastReport.length) downloadCsv(lastReport); });
+  statusFilter.addEventListener('change', () => renderTable(lastReport));
+</script>
+</body>
+</html>
