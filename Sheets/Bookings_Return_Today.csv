@@ -1,0 +1,23 @@
+﻿vehicle_id,license_plate,station,mileage,Booking Pickup Date,Booking Return Date,LINK TO WAVE,Next Booking Pickup Date,Next Booking Return Date,Return+3,Active until,Sticky Next Value,Sticky Update Flag
+ZFA25000002W17778,WI RS 3487,Stuttgart,97089,31/1/2026,5/2/2026,https://backoffice.roadsurfer.com/vehicles/5298/edit,30/3/2026,4/4/2026,8/2/2026,8/2/2026,,0
+WV2ZZZ7HZPH058505,WI RS 3791,Stuttgart,71221,3/2/2026,5/2/2026,https://backoffice.roadsurfer.com/vehicles/7984/edit,11/10/2025,17/10/2025,8/2/2026,8/2/2026,,0
+WV2ZZZ7HZNH048391,WI RS 1794,Bologna,86511,2/2/2026,5/2/2026,https://backoffice.roadsurfer.com/vehicles/6442/edit,3/3/2026,6/3/2026,8/2/2026,8/2/2026,,0
+WV2ZZZ7HZRH038551,WI RS 5281,Marburg,50884,3/2/2026,5/2/2026,https://backoffice.roadsurfer.com/vehicles/10670/edit,12/3/2026,26/3/2026,8/2/2026,8/2/2026,,0
+WV2ZZZ7HZPH062812,WI RS 3942,Kassel,85057,29/1/2026,5/2/2026,https://backoffice.roadsurfer.com/vehicles/8620/edit,20/4/2026,27/4/2026,8/2/2026,8/2/2026,,0
+WV2ZZZ7HZPH047829,WI RS 3440,Barcelona,99460,29/1/2026,5/2/2026,https://backoffice.roadsurfer.com/vehicles/8564/edit,9/2/2026,13/2/2026,8/2/2026,8/2/2026,,0
+WV2ZZZ7HZPH053253,WI RS 3621,Antwerp,72333,31/1/2026,5/2/2026,https://backoffice.roadsurfer.com/vehicles/8634/edit,9/2/2026,16/2/2026,8/2/2026,8/2/2026,,0
+WV2ZZZ7HZRH060983,WI RS 5886,Marburg,52898,2/2/2026,5/2/2026,https://backoffice.roadsurfer.com/vehicles/12262/edit,18/10/2025,11/11/2025,8/2/2026,8/2/2026,,0
+VF3YLCPFCNG028116,M RS 3912,Paris Airport (CDG),92978,3/2/2026,5/2/2026,https://backoffice.roadsurfer.com/vehicles/5351/edit,28/2/2026,7/3/2026,8/2/2026,8/2/2026,,0
+ZFA25000002W19431,FJ23BSU,Edinburgh,75785,10/1/2026,5/2/2026,https://backoffice.roadsurfer.com/vehicles/6772/edit,11/2/2026,14/2/2026,8/2/2026,8/2/2026,,0
+WV1ZZZSY1R9041742,WI RS 5632,Munich,57261,29/1/2026,5/2/2026,https://backoffice.roadsurfer.com/vehicles/10565/edit,17/2/2026,23/2/2026,8/2/2026,8/2/2026,,0
+WV1ZZZSY8R9044962,WI RS 6174,Malaga,55480,30/1/2026,5/2/2026,https://backoffice.roadsurfer.com/vehicles/11946/edit,14/2/2026,21/2/2026,8/2/2026,8/2/2026,,0
+ZFA25000002Z09664,WI RS 7327,Rome,49132,2/2/2026,5/2/2026,https://backoffice.roadsurfer.com/vehicles/10776/edit,2/4/2026,9/4/2026,8/2/2026,8/2/2026,,0
+3C6MRVJG7SE517975,CRS7552,Las Vegas,41876,31/1/2026,5/2/2026,https://backoffice.roadsurfer.com/vehicles/15766/edit,13/2/2026,16/2/2026,8/2/2026,8/2/2026,,0
+ZFA250009SMB14854,WI RS 8291,Vienna-South,27763,30/1/2026,5/2/2026,https://backoffice.roadsurfer.com/vehicles/16262/edit,28/3/2026,4/4/2026,8/2/2026,8/2/2026,,0
+WF0LXXTA4LSM02258,WI RC 2064,Berlin-Schönefeld,11957,31/1/2026,5/2/2026,https://backoffice.roadsurfer.com/vehicles/15293/edit,27/9/2025,4/10/2025,8/2/2026,8/2/2026,,0
+ZFA250006SMA98919,251-D-46580,Dublin,20740,30/1/2026,5/2/2026,https://backoffice.roadsurfer.com/vehicles/15030/edit,13/3/2026,18/3/2026,8/2/2026,8/2/2026,,0
+ZFA250003SG021257,WI RS 8137,Berlin-Schönefeld,14342,7/10/2025,5/2/2026,https://backoffice.roadsurfer.com/vehicles/16174/edit,17/10/2025,27/10/2025,8/2/2026,8/2/2026,,0
+ZFA250001SG021614,WI RS 8280,Vienna-South,20517,2/2/2026,5/2/2026,https://backoffice.roadsurfer.com/vehicles/15883/edit,9/2/2026,14/2/2026,8/2/2026,8/2/2026,,0
+ZFA250007SG021553,WI RS 8472,Barcelona,24618,27/1/2026,5/2/2026,https://backoffice.roadsurfer.com/vehicles/15886/edit,27/1/2026,5/2/2026,8/2/2026,8/2/2026,,0
+ZFA250002SMB17885,WI RS 8423,Munich,23501,29/1/2026,5/2/2026,https://backoffice.roadsurfer.com/vehicles/15915/edit,6/2/2026,9/2/2026,8/2/2026,8/2/2026,,0
+1FDWE3FN9SDD38665,CSN0397,Los Angeles,45220,20/1/2026,5/2/2026,https://backoffice.roadsurfer.com/vehicles/15588/edit,2/4/2026,6/4/2026,8/2/2026,8/2/2026,,0

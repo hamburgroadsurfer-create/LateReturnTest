@@ -1,1220 +1,1151 @@
 <!doctype html>
 <html lang="de">
+
 <head>
   <meta charset="utf-8" />
-  <title>Return Feasibility – Ampelcheck</title>
+  <title>Fleet Monitor – Return & Security</title>
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚐</text></svg>">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <style>
-    :root{
+    :root {
       color-scheme: light dark;
-      --bg:#0b0f14;
-      --surface:rgba(255,255,255,0.06);
-      --surface2:rgba(255,255,255,0.09);
-      --border:rgba(255,255,255,0.14);
-      --text:rgba(255,255,255,0.92);
-      --muted:rgba(255,255,255,0.68);
-      --muted2:rgba(255,255,255,0.55);
-      --brand:#0b6efd;
-      --brand2:#1b8cff;
-      --ok:#198754;
-      --warn:#ffc107;
-      --bad:#dc3545;
-      --unk:#6c757d;
-      --shadow:0 14px 40px rgba(0,0,0,.35);
-      --radius:16px;
-      --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
-      --sans:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+      --bg: #0b0f14;
+      --surface: rgba(255, 255, 255, 0.06);
+      --surface2: rgba(255, 255, 255, 0.09);
+      --border: rgba(255, 255, 255, 0.14);
+      --text: rgba(255, 255, 255, 0.92);
+      --muted: rgba(255, 255, 255, 0.68);
+      --brand: #0b6efd;
+      --ok: #198754;
+      --warn: #ffc107;
+      --bad: #dc3545;
+      --unk: #6c757d;
+      --radius: 14px;
+      --sans: system-ui, -apple-system, sans-serif;
     }
-    @media (prefers-color-scheme: light){
-      :root{
-        --bg:#f7f8fb;
-        --surface:#ffffff;
-        --surface2:#f2f5fb;
-        --border:rgba(0,0,0,0.10);
-        --text:rgba(0,0,0,0.88);
-        --muted:rgba(0,0,0,0.62);
-        --muted2:rgba(0,0,0,0.52);
-        --shadow:0 10px 25px rgba(0,0,0,.08);
+
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f7f8fb;
+        --surface: #ffffff;
+        --surface2: #f2f5fb;
+        --border: rgba(0, 0, 0, 0.10);
+        --text: rgba(0, 0, 0, 0.88);
+        --muted: rgba(0, 0, 0, 0.62);
       }
     }
-    *{ box-sizing:border-box; }
-    html,body{ height:100%; }
-    body{
-      margin:0;
-      font-family:var(--sans);
-      background:
-        radial-gradient(1200px 800px at 12% -10%, rgba(11,110,253,0.22), transparent 55%),
-        radial-gradient(900px 650px at 110% 10%, rgba(25,135,84,0.16), transparent 55%),
-        var(--bg);
-      color:var(--text);
-    }
-    .wrap{ max-width:1440px; margin:0 auto; padding:28px 16px 60px; }
 
-    /* Topbar */
-    .topbar{
-      display:flex; align-items:center; justify-content:space-between;
-      gap:12px; flex-wrap:wrap; margin-bottom:18px;
-    }
-    .brand{ display:flex; align-items:center; gap:12px; }
-    .logo{
-      width:44px; height:44px; border-radius:14px;
-      background:linear-gradient(135deg,var(--brand),var(--brand2));
-      box-shadow:var(--shadow);
-      display:grid; place-items:center;
-      color:white; font-weight:950; user-select:none;
-      letter-spacing:0.4px;
-    }
-    h1{ margin:0; font-size:1.35rem; line-height:1.1; }
-    .subtitle{ margin:4px 0 0; color:var(--muted); font-size:0.95rem; }
-    /* (User wanted client line removed -> subtitle is now just a clean hint) */
-
-    .pill{
-      display:inline-flex; align-items:center; gap:8px;
-      border:1px solid var(--border);
-      background:rgba(255,255,255,0.04);
-      border-radius:999px;
-      padding:8px 10px;
-      color:var(--muted);
-      font-size:0.9rem;
-      backdrop-filter: blur(6px);
-    }
-    .pill b{ color:var(--text); font-weight:800; }
-
-    .grid{ display:grid; grid-template-columns:1fr; gap:14px; align-items:start; }
-
-    .card{
-      border:1px solid var(--border);
-      background:rgba(255,255,255,0.05);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      overflow:hidden;
-      backdrop-filter: blur(8px);
-    }
-    @media (prefers-color-scheme: light){
-      .card{ background:var(--surface); }
-      .pill{ background:var(--surface); }
-    }
-    .card-h{
-      padding:14px 16px;
-      border-bottom:1px solid var(--border);
-      display:flex; align-items:center; justify-content:space-between;
-      gap:10px; flex-wrap:wrap;
-      background:linear-gradient(180deg, rgba(255,255,255,.06), transparent);
-    }
-    .card-h h2{ margin:0; font-size:1.05rem; display:flex; align-items:center; gap:10px; }
-    .card-b{ padding:16px; }
-
-    /* Files row */
-    .row{
-      display:grid; gap:12px;
-      grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));
+    * {
+      box-sizing: border-box;
     }
 
-    .drop{
-      border:1px solid var(--border);
-      border-radius:16px;
-      background:rgba(255,255,255,0.04);
-      padding:12px;
-      transition:transform .08s ease, border-color .12s ease, background .12s ease;
-      min-height:118px;
-    }
-    @media (prefers-color-scheme: light){
-      .drop{ background:var(--surface2); }
-    }
-    .drop.dragover{
-      border-color:rgba(11,110,253,0.65);
-      background:rgba(11,110,253,0.10);
-      transform:translateY(-1px);
-    }
-    .drop-top{
-      display:flex; align-items:center; justify-content:space-between;
-      gap:10px; flex-wrap:wrap; margin-bottom:10px;
-    }
-    .drop label{
-      font-weight:950;
-      display:flex; align-items:center; gap:8px;
-      margin:0; line-height:1.15;
-    }
-    input[type="file"]{
-      width:100%;
-      border:1px solid var(--border);
-      border-radius:14px;
-      padding:10px;
-      background:transparent;
-      color:var(--text);
+    body {
+      margin: 0;
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      padding-bottom: 60px;
     }
 
-    .filemeta{
-      margin-top:8px;
-      display:flex; gap:8px; align-items:center; flex-wrap:wrap;
-      color:var(--muted);
-      font-size:0.9rem;
+    .wrap {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
     }
-    .badge{
-      display:inline-flex; align-items:center; gap:6px;
-      border:1px solid var(--border);
-      background:rgba(255,255,255,0.04);
-      border-radius:999px;
-      padding:4px 8px;
-      font-size:0.82rem;
-      color:var(--muted);
-      white-space:nowrap;
+
+    /* Header */
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .logo {
+      font-weight: 900;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo span {
+      background: linear-gradient(135deg, var(--brand), #1b8cff);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 8px;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-h {
+      padding: 15px;
+      border-bottom: 1px solid var(--border);
+      font-weight: bold;
+      font-size: 1.1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .card-b {
+      padding: 20px;
+    }
+
+    /* Mode Switcher */
+    .mode-switch {
+      background: rgba(11, 110, 253, 0.1);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .mode-label {
+      cursor: pointer;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
+    }
+
+    .mode-label input {
+      width: 1.2em;
+      height: 1.2em;
+    }
+
+    /* Drop Zones */
+    .row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 15px;
+    }
+
+    .drop {
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.02);
+      transition: 0.2s;
+      min-height: 100px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .drop.dragover {
+      background: rgba(11, 110, 253, 0.1);
+      border-color: var(--brand);
+    }
+
+    .drop-l {
+      font-weight: bold;
+      margin-bottom: 5px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .filemeta {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 5px;
+    }
+
+    input[type=file] {
+      width: 100%;
     }
 
     /* Controls */
-    .controls{ display:flex; gap:10px; flex-wrap:wrap; align-items:end; margin-top:14px; }
-    .field{ display:flex; flex-direction:column; gap:6px; min-width:190px; }
-    .field label{ font-weight:850; margin:0; }
-    .field input, .field select{
-      padding:10px 12px;
-      border-radius:14px;
-      border:1px solid var(--border);
-      background:transparent;
-      color:var(--text);
-      outline:none;
-    }
-    .field input:focus, .field select:focus{
-      border-color:rgba(11,110,253,0.6);
-      box-shadow:0 0 0 3px rgba(11,110,253,0.15);
+    .controls {
+      margin-top: 20px;
+      display: flex;
+      gap: 15px;
+      align-items: end;
+      flex-wrap: wrap;
     }
 
-    .btns{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    button{
-      padding:10px 14px;
-      border-radius:14px;
-      border:1px solid var(--border);
-      cursor:pointer;
-      background:rgba(255,255,255,0.07);
-      color:var(--text);
-      font-weight:900;
-      transition:transform .06s ease, opacity .12s ease, filter .12s ease;
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
     }
-    button:hover{ transform:translateY(-1px); filter:brightness(1.05); }
-    button.primary{
-      border-color:rgba(11,110,253,0.6);
-      background:linear-gradient(135deg,var(--brand),var(--brand2));
-      color:white;
-    }
-    button:disabled{ opacity:0.5; cursor:not-allowed; transform:none; filter:none; }
 
-    .statusline{
-      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
-      color:var(--muted);
-      font-size:0.95rem;
-      padding:6px 0;
+    .field label {
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: var(--muted);
     }
-    .spinner{
-      width:16px; height:16px;
-      border-radius:50%;
-      border:2px solid rgba(255,255,255,0.25);
-      border-top-color: rgba(255,255,255,0.85);
-      animation:spin .9s linear infinite;
-      display:none;
+
+    .field input,
+    .field select {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
     }
-    @media (prefers-color-scheme: light){
-      .spinner{
-        border:2px solid rgba(0,0,0,0.18);
-        border-top-color:rgba(0,0,0,0.65);
+
+    button {
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      transition: 0.1s;
+    }
+
+    button.primary {
+      background: var(--brand);
+      color: white;
+      border-color: transparent;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.1);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Summary & Table */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .sum-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      padding: 15px;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .sum-val {
+      font-size: 1.8rem;
+      font-weight: 900;
+      margin: 5px 0;
+    }
+
+    .sum-lbl {
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .tablewrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1200px;
+      font-size: 0.9rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.2);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      backdrop-filter: blur(5px);
+    }
+
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    /* Status Badges */
+    .badge {
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-weight: bold;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      color: white;
+      display: inline-block;
+    }
+
+    .status-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      display: inline-block;
+      vertical-align: middle;
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+    }
+
+    .bg-green {
+      background: var(--ok);
+    }
+
+    .bg-yellow {
+      background: var(--warn);
+      color: black;
+    }
+
+    .bg-red {
+      background: var(--bad);
+    }
+
+    .bg-grey {
+      background: var(--unk);
+    }
+
+    .mono {
+      font-family: monospace;
+    }
+
+    .spinner {
+      display: none;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #888;
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 1s infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
       }
     }
-    @keyframes spin{ to{ transform:rotate(360deg); } }
 
-    .error{
-      border:1px solid rgba(220,53,69,0.55);
-      background:rgba(220,53,69,0.12);
-      color:var(--text);
-      padding:12px 14px;
-      border-radius:16px;
-      margin-top:12px;
-      display:none;
-      font-weight:800;
+    /* Helper for disabled section */
+    .disabled-area {
+      opacity: 0.4;
+      pointer-events: none;
+      filter: grayscale(1);
     }
 
-    /* Summary */
-    .summary-grid{
-      display:grid;
-      grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
-      gap:10px;
-      margin:12px 0 0;
+    .wave-btn {
+      text-decoration: none;
+      font-size: 1.5rem;
+      transition: transform 0.2s;
+      display: inline-block;
     }
-    .summary-card{
-      padding:12px 14px;
-      border:1px solid var(--border);
-      border-radius:16px;
-      background:rgba(255,255,255,0.06);
-    }
-    @media (prefers-color-scheme: light){
-      .summary-card{ background:var(--surface2); }
-    }
-    .summary-title{ display:flex; align-items:center; gap:8px; font-weight:950; }
-    .summary-value{ font-size:1.6rem; margin-top:4px; font-weight:950; }
-    .summary-sub{ margin-top:6px; color:var(--muted); font-size:0.92rem; }
 
-    .status{
-      display:inline-flex;
-      padding:3px 10px;
-      border-radius:999px;
-      font-weight:950;
-      color:white;
-      font-size:0.82rem;
-      letter-spacing:0.3px;
-      align-items:center;
-      gap:8px;
+    .wave-btn:hover {
+      transform: scale(1.2) rotate(-10deg);
     }
-    .green{ background:var(--ok); }
-    .yellow{ background:var(--warn); color:#111; }
-    .red{ background:var(--bad); }
-    .unknown{ background:var(--unk); }
 
-    /* Table */
-    .tablewrap{
-      overflow:auto;
-      border-radius:16px;
-      border:1px solid var(--border);
-      margin-top:12px;
+    .mode-label {
+      padding: 10px 15px;
+      border-radius: 8px;
+      transition: background 0.2s;
     }
-    table{ width:100%; border-collapse:collapse; min-width:1480px; }
-    th, td{
-      padding:10px 10px;
-      border-bottom:1px solid var(--border);
-      text-align:left;
-      vertical-align:top;
-      font-size:0.95rem;
-    }
-    th{
-      position:sticky;
-      top:0;
-      background:rgba(0,0,0,0.18);
-      backdrop-filter:blur(6px);
-      z-index:1;
-      font-size:0.86rem;
-      color:var(--muted);
-      text-transform:uppercase;
-      letter-spacing:0.6px;
-      white-space:nowrap;
-    }
-    @media (prefers-color-scheme: light){
-      th{ background:rgba(255,255,255,0.82); }
-    }
-    tbody tr:hover{ background:rgba(11,110,253,0.06); }
 
-    a.wave{
-      display:inline-flex; align-items:center; gap:8px;
-      text-decoration:none;
-      font-weight:950;
-      border:1px solid rgba(11,110,253,0.45);
-      background:rgba(11,110,253,0.10);
-      color:var(--text);
-      padding:6px 10px;
-      border-radius:999px;
-      white-space:nowrap;
+    .mode-label:hover {
+      background: rgba(255, 255, 255, 0.1);
     }
-    a.wave:hover{ background:rgba(11,110,253,0.16); }
 
-    .muted{ color:var(--muted); }
-    .small{ font-size:0.92rem; }
-    .right{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-    .linkbtn{ border-color:rgba(11,110,253,0.45); background:rgba(11,110,253,0.10); }
-    .mono{ font-family:var(--mono); font-size:0.87rem; }
+    input[type="radio"]:checked+span {
+      text-decoration: underline;
+      text-underline-offset: 4px;
+      color: var(--brand);
+    }
   </style>
+  <script src="report_data.js"></script>
 </head>
 
 <body>
+
   <div class="wrap">
     <div class="topbar">
-      <div class="brand">
-        <div class="logo">RF</div>
-        <div>
-          <h1>Return Feasibility – Ampelcheck</h1>
-          <div class="subtitle">Ampel aus GNSS-Distanz zur Return-Station</div>
-        </div>
-      </div>
-
-      <div class="right">
-        <span class="pill">Stations-Cache: <b id="cacheState">leer</b></span>
-        <button id="downloadTemplatesBtn" class="linkbtn" type="button">Templates</button>
+      <div class="logo"><span>FM</span> Fleet Monitor</div>
+      <div>
+        <!-- Templates removed -->
       </div>
     </div>
 
-    <div class="grid">
-      <div class="card">
-        <div class="card-h">
-          <h2>📁 Dateien & Einstellungen</h2>
-          <span class="badge">Drag & Drop</span>
-        </div>
-        <div class="card-b">
-          <div class="row">
-            <div class="drop" data-drop="booking">
-              <div class="drop-top">
-                <label for="bookingFile">📌 Booking Return</label>
-                <span class="badge">Pflicht</span>
-              </div>
-              <input id="bookingFile" type="file" accept=".csv,.xlsx" />
-              <div class="filemeta" id="bookingMeta">Keine Datei gewählt.</div>
-            </div>
-
-            <div class="drop" data-drop="stations">
-              <div class="drop-top">
-                <label for="stationFile">🏁 Stations</label>
-                <span class="badge">Cache</span>
-              </div>
-              <input id="stationFile" type="file" accept=".csv,.xlsx" />
-              <div class="filemeta" id="stationMeta">Keine Datei gewählt (Cache wird genutzt, falls vorhanden).</div>
-            </div>
-
-            <div class="drop" data-drop="gnss">
-              <div class="drop-top">
-                <label for="gnssFile">🛰️ Power BI / TCU Export</label>
-                <span class="badge">Pflicht</span>
-              </div>
-              <input id="gnssFile" type="file" accept=".csv,.xlsx" />
-              <div class="filemeta" id="gnssMeta">Keine Datei gewählt.</div>
-            </div>
-          </div>
-
-          <div class="controls">
-            <div class="field">
-              <label for="greenThreshold">Grün bis (km)</label>
-              <input id="greenThreshold" type="number" value="200" min="1" max="2000" />
-            </div>
-            <div class="field">
-              <label for="yellowThreshold">Gelb bis (km)</label>
-              <input id="yellowThreshold" type="number" value="1000" min="1" max="5000" />
-            </div>
-
-            <div class="btns">
-              <button id="generateBtn" class="primary" type="button">Ampel berechnen</button>
-              <button id="downloadBtn" disabled type="button">CSV Export</button>
-              <div class="statusline">
-                <div class="spinner" id="spinner"></div>
-                <span id="statusMsg" class="muted">Bereit.</span>
-              </div>
-            </div>
-          </div>
-
-          <div id="errorBox" class="error"></div>
-        </div>
+    <div class="card">
+      <div class="card-h">
+        Daten & Konfiguration
       </div>
 
-      <div class="card">
-        <div class="card-h">
-          <h2>📊 Ergebnis</h2>
-          <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
-            <div class="field" style="min-width:220px;">
-              <label for="statusFilter">Status</label>
-              <select id="statusFilter">
-                <option value="all">Alle</option>
-                <option value="red">Rot</option>
-                <option value="yellow">Gelb</option>
-                <option value="green">Grün</option>
-                <option value="unknown">Unknown</option>
-              </select>
+      <div class="mode-switch">
+        <label class="mode-label">
+          <input type="radio" name="appMode" value="return" checked onchange="toggleMode()">
+          <span>🚗 Return Check (Customer)</span>
+        </label>
+        <label class="mode-label">
+          <input type="radio" name="appMode" value="security" onchange="toggleMode()">
+          <span>👮 Security / Night Check (Theft)</span>
+        </label>
+        <label class="mode-label" style="opacity:0.5; cursor:not-allowed;" title="Coming Soon">
+          <input type="radio" name="appMode" value="unified" onchange="toggleMode()" disabled>
+          <span>🚀 Unified Check (Locked)</span>
+        </label>
+      </div>
+
+      <div class="card-b">
+        <div class="row">
+          <div class="drop" data-drop="booking">
+            <div class="drop-l">
+              <span id="labelInput1">📌 Vehicle List (Returns Today)</span>
+              <span class="badge bg-green" id="badgeInput1">Return Logic</span>
             </div>
-            <div class="field" style="min-width:260px;">
-              <label for="stationFilter">Station</label>
-              <select id="stationFilter">
-                <option value="all">Alle</option>
-              </select>
+            <input id="bookingFile" type="file" accept=".csv,.xlsx">
+            <div class="filemeta" id="bookingMeta">No file selected</div>
+          </div>
+
+          <div class="drop" data-drop="stations">
+            <div class="drop-l">
+              <span>🏁 Stations Master</span>
+              <span class="badge bg-grey">Cache</span>
             </div>
-            <div class="field" style="min-width:240px;">
-              <label for="sortBy">Sortierung</label>
-              <select id="sortBy">
-                <option value="status">Status (rot→gelb→grün→unknown)</option>
-                <option value="distance_asc">Distanz ↑</option>
-                <option value="distance_desc">Distanz ↓</option>
-                <option value="return_date">Return Date</option>
-                <option value="station">Station</option>
-              </select>
+            <input id="stationFile" type="file" accept=".csv,.xlsx">
+            <div class="filemeta" id="stationMeta">No file selected</div>
+          </div>
+
+          <div class="drop" data-drop="gnss">
+            <div class="drop-l">
+              <span>🛰️ TCU / PowerBI Export</span>
+              <span class="badge bg-grey">Cache</span>
             </div>
+            <input id="gnssFile" type="file" accept=".csv,.xlsx">
+            <div class="filemeta" id="gnssMeta">No file selected</div>
           </div>
         </div>
 
-        <div class="card-b">
-          <div id="summary" class="summary-grid muted">
-            <div class="summary-card">
-              <div class="summary-title">Noch keine Daten</div>
-              <div class="summary-sub">Dateien wählen → Ampel berechnen</div>
-            </div>
+        <div class="controls">
+          <div class="field" id="thresholdControls">
+            <label>Grün Radius (km)</label>
+            <input type="number" id="greenInput" value="200">
+          </div>
+          <div class="field" id="thresholdControls2">
+            <label>Gelb Radius (km)</label>
+            <input type="number" id="yellowInput" value="1000">
+          </div>
+          <div class="field disabled-area" id="secInputWrapper">
+            <label>Security Radius (km)</label>
+            <input type="number" id="secInput" value="15">
           </div>
 
-          <div id="tableHost" class="muted" style="margin-top:10px;">
-            Noch keine Berechnung ausgeführt.
-          </div>
+          <div style="flex-grow:1"></div>
+
+          <div class="spinner" id="spinner"></div>
+          <button id="generateBtn" class="primary" onclick="generateReport()">Calculate Status</button>
+          <button id="exportBtn" disabled onclick="exportCsv()">CSV Export</button>
         </div>
+        <div id="errorBox" style="color:var(--bad); margin-top:10px; font-weight:bold;"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">
+        <span>Analysis</span>
+        <select id="filterStatus" onchange="renderTable()" style="font-size:0.9rem; padding:4px;">
+          <option value="all">All Status</option>
+          <option value="red">Only RED (Alarm)</option>
+          <option value="yellow">Only YELLOW</option>
+          <option value="green">Only GREEN</option>
+        </select>
+        <select id="sortMode" onchange="renderTable()" style="font-size:0.9rem; padding:4px; margin-left:10px;">
+          <option value="status">Sort: Status (Red top)</option>
+          <option value="dist_desc">Sort: Distance (Far -> Near)</option>
+          <option value="dist_asc">Sort: Distance (Near -> Far)</option>
+        </select>
+      </div>
+      <div class="card-b">
+        <div id="summary" class="summary-grid"></div>
+        <div id="tableHost"></div>
       </div>
     </div>
   </div>
 
-<script>
-  const bookingInput = document.getElementById('bookingFile');
-  const stationInput = document.getElementById('stationFile');
-  const gnssInput = document.getElementById('gnssFile');
-  const generateBtn = document.getElementById('generateBtn');
-  const downloadBtn = document.getElementById('downloadBtn');
-  const downloadTemplatesBtn = document.getElementById('downloadTemplatesBtn');
+  <script>
+    /* --- KONFIGURATION & STATE --- */
+    let lastData = [];
+    let stationCache = null;
+    let gnssCache = null;
 
-  const statusMsg = document.getElementById('statusMsg');
-  const spinner = document.getElementById('spinner');
-
-  const tableHost = document.getElementById('tableHost');
-  const errorBox = document.getElementById('errorBox');
-  const summary = document.getElementById('summary');
-  const statusFilter = document.getElementById('statusFilter');
-  const stationFilter = document.getElementById('stationFilter');
-  const sortBy = document.getElementById('sortBy');
-  const greenThreshold = document.getElementById('greenThreshold');
-  const yellowThreshold = document.getElementById('yellowThreshold');
-  const cacheState = document.getElementById('cacheState');
-
-  const bookingMeta = document.getElementById('bookingMeta');
-  const stationMeta = document.getElementById('stationMeta');
-  const gnssMeta = document.getElementById('gnssMeta');
-
-  let lastReport = [];
-  let stationRowsCache = null;
-
-  const GNSS_MAX_AGE_HOURS_RELATIVE_TO_RETURN = 24;
-
-  try {
-    const rawStations = localStorage.getItem('returnTool_stations_runtime_v2');
-    if (rawStations) {
-      stationRowsCache = JSON.parse(rawStations);
-      cacheState.textContent = 'aktiv';
-      statusMsg.textContent = 'Stations aus Cache geladen.';
-    } else cacheState.textContent = 'leer';
-  } catch (e) { cacheState.textContent = 'leer'; }
-
-  function normalizeHeader(key) {
-    return (key ?? '').toString().replace(/\ufeff/g, '').trim().toLowerCase().replace(/[;:]+$/g, '');
-  }
-  function parseNumber(value) {
-    if (typeof value === 'number') return value;
-    if (value == null || value === '') return NaN;
-    const normalized = value.toString().trim().replace(',', '.');
-    const parsed = Number.parseFloat(normalized);
-    return Number.isFinite(parsed) ? parsed : NaN;
-  }
-  function slugifyStation(value) {
-    if (!value) return '';
-    let s = value.toString().trim().toLowerCase();
-    s = s.replace(/\(.*?\)/g, '');
-    s = s.replace(/ß/g, 'ss');
-    s = s.replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue');
-    s = s.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
-    s = s.replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
-    return s;
-  }
-  function splitCsvLine(line) {
-    const out = [];
-    let cur = '';
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"') {
-        if (inQuotes && line[i+1] === '"') { cur += '"'; i++; }
-        else inQuotes = !inQuotes;
-      } else if (ch === ',' && !inQuotes) { out.push(cur); cur = ''; }
-      else cur += ch;
-    }
-    out.push(cur);
-    return out.map(s => s.trim());
-  }
-  function haversineKm(lat1, lon1, lat2, lon2) {
-    const toRad = (v) => (v * Math.PI) / 180;
-    const R = 6371;
-    const dLat = toRad(lat2 - lat1);
-    const dLon = toRad(lon2 - lon1);
-    const a =
-      Math.sin(dLat/2)*Math.sin(dLat/2) +
-      Math.cos(toRad(lat1))*Math.cos(toRad(lat2)) *
-      Math.sin(dLon/2)*Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-  }
-  function classify(distance, thresholds) {
-    if (distance == null || Number.isNaN(distance)) return { status: 'unknown', label: '—' };
-    if (distance <= thresholds.green) return { status: 'green', label: `${distance.toFixed(1)} km` };
-    if (distance <= thresholds.yellow) return { status: 'yellow', label: `${distance.toFixed(1)} km` };
-    return { status: 'red', label: `${distance.toFixed(1)} km` };
-  }
-  function normalizeDate(value) {
-    if (value == null || value === '') return '';
-    if (typeof value === 'number' && Number.isFinite(value)) {
-      const parsed = XLSX.SSF.parse_date_code(value);
-      if (parsed) return new Date(Date.UTC(parsed.y, parsed.m - 1, parsed.d)).toISOString().slice(0,10);
-    }
-    const s = value.toString().trim();
-    if (/^[0-9]+(\.[0-9]+)?$/.test(s)) {
-      const num = Number.parseFloat(s);
-      if (Number.isFinite(num) && num > 20000) {
-        const parsed = XLSX.SSF.parse_date_code(num);
-        if (parsed) return new Date(Date.UTC(parsed.y, parsed.m - 1, parsed.d)).toISOString().slice(0,10);
-      }
-    }
-    let m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-    if (m) {
-      const date = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
-      if (!Number.isNaN(date.getTime())) return date.toISOString().slice(0,10);
-    }
-    m = /^(\d{1,2})[./](\d{1,2})[./](\d{2,4})$/.exec(s);
-    if (m) {
-      let d = Number(m[1]);
-      let mo = Number(m[2]) - 1;
-      let y = Number(m[3]); if (y < 100) y += 2000;
-      const date = new Date(Date.UTC(y, mo, d));
-      if (!Number.isNaN(date.getTime())) return date.toISOString().slice(0,10);
-    }
-    const asDate = new Date(s);
-    if (!Number.isNaN(asDate.getTime())) return asDate.toISOString().slice(0,10);
-    return s;
-  }
-  function getValue(row, candidates) {
-    for (const key of candidates) if (row[key] != null && row[key] !== '') return row[key];
-    return '';
-  }
-  function pickBySubstring(row, substring) {
-    const key = Object.keys(row).find((k) => k.includes(substring));
-    return key ? row[key] : '';
-  }
-  function parseTimestampToMs(value) {
-    if (value == null || value === '') return NaN;
-
-    if (typeof value === 'number' && Number.isFinite(value) && value > 20000) {
-      const parsed = XLSX.SSF.parse_date_code(value);
-      if (parsed) return Date.UTC(parsed.y, parsed.m - 1, parsed.d, parsed.H || 0, parsed.M || 0, parsed.S || 0);
-    }
-
-    const s = value.toString().trim();
-    if (!s) return NaN;
-
-    if (/^[0-9]+(\.[0-9]+)?$/.test(s)) {
-      const num = Number.parseFloat(s);
-      if (!Number.isFinite(num)) return NaN;
-      if (num > 1e12) return Math.floor(num);
-      if (num > 1e9) return Math.floor(num * 1000);
-      if (num > 20000) {
-        const parsed = XLSX.SSF.parse_date_code(num);
-        if (parsed) return Date.UTC(parsed.y, parsed.m - 1, parsed.d, parsed.H || 0, parsed.M || 0, parsed.S || 0);
-      }
-    }
-
-    let m = /^(\d{1,2})[./](\d{1,2})[./](\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/.exec(s);
-    if (m) {
-      const d = Number(m[1]);
-      const mo = Number(m[2]) - 1;
-      let y = Number(m[3]); if (y < 100) y += 2000;
-      const hh = m[4] ? Number(m[4]) : 0;
-      const mm = m[5] ? Number(m[5]) : 0;
-      const ss = m[6] ? Number(m[6]) : 0;
-      return Date.UTC(y, mo, d, hh, mm, ss);
-    }
-
-    const ms = Date.parse(s);
-    return Number.isFinite(ms) ? ms : NaN;
-  }
-  function formatDateTime(ms) {
-    if (!Number.isFinite(ms)) return '';
-    const d = new Date(ms);
-    const yyyy = d.getUTCFullYear();
-    const mm = String(d.getUTCMonth()+1).padStart(2,'0');
-    const dd = String(d.getUTCDate()).padStart(2,'0');
-    const hh = String(d.getUTCHours()).padStart(2,'0');
-    const mi = String(d.getUTCMinutes()).padStart(2,'0');
-    return `${yyyy}-${mm}-${dd} ${hh}:${mi}Z`;
-  }
-  function parseISODateToUtcMs(dateStr) {
-    if (!dateStr) return NaN;
-    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
-    if (!m) return NaN;
-    return Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 0, 0, 0);
-  }
-  function isGnssFreshRelativeToReturn(gnssMs, returnDateStr) {
-    if (!Number.isFinite(gnssMs)) return false;
-
-    let refMs = parseISODateToUtcMs(returnDateStr);
-    if (!Number.isFinite(refMs)) {
-      const now = new Date();
-      refMs = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0);
-    }
-
-    const cutoff = refMs - GNSS_MAX_AGE_HOURS_RELATIVE_TO_RETURN * 3600 * 1000;
-    return gnssMs >= cutoff;
-  }
-
-  async function readAsText(file) { return await file.text(); }
-  function detectDelimiter(text) {
-    const lines = text.split(/\r?\n/).filter(l => l.trim().length);
-    if (!lines.length) return ',';
-    const line = lines[0];
-    const semis = (line.match(/;/g) || []).length;
-    const commas = (line.match(/,/g) || []).length;
-    return semis > commas ? ';' : ',';
-  }
-  function sheetToJson(workbook) {
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
-    if (!rows.length) return [];
-    const headers = rows[0].map(normalizeHeader);
-    return rows.slice(1).map((row) => {
-      const obj = {};
-      headers.forEach((key, idx) => { obj[key] = row[idx] ?? ''; });
-      return obj;
-    });
-  }
-  function parseCsvText(text) {
-    const delim = detectDelimiter(text);
-    const wb = XLSX.read(text, { type: 'string', raw: true, FS: delim });
-    return sheetToJson(wb);
-  }
-  async function parseFile(file) {
-    const name = (file.name || '').toLowerCase();
-    if (name.endsWith('.csv')) {
-      const text = await readAsText(file);
-      return parseCsvText(text);
-    }
-    const buffer = await file.arrayBuffer();
-    const workbook = XLSX.read(buffer, { type: 'array' });
-    return sheetToJson(workbook);
-  }
-  function unpackRowIfPacked(row, keys) {
-    const packed = (row[keys.a] ?? '').toString();
-    const others = [keys.b, keys.c, keys.d, keys.e].filter(Boolean);
-    const hasOther = others.some(k => (row[k] ?? '').toString().trim() !== '');
-    if (!packed || hasOther) return row;
-
-    if (packed.includes(',') && packed.length > 10) {
-      const parts = splitCsvLine(packed);
-      if (parts.length >= 4) {
-        const r2 = { ...row };
-        r2[keys.a] = parts[0] ?? '';
-        if (keys.b) r2[keys.b] = parts[1] ?? '';
-        if (keys.c) r2[keys.c] = parts[2] ?? '';
-        if (keys.d) r2[keys.d] = parts[3] ?? '';
-        if (keys.e) r2[keys.e] = parts[4] ?? '';
-        return r2;
-      }
-    }
-    return row;
-  }
-
-  function makeStationMap(stationRows) {
-    const map = new Map();
-    stationRows.forEach((r0) => {
-      const r = unpackRowIfPacked(r0, { a:'station_key', b:'station_display', c:'address', d:'latitude', e:'longitude' });
-
-      const key = (getValue(r, ['station_key']) || '').toString().trim().toLowerCase();
-      const display = (getValue(r, ['station_display']) || key).toString().trim();
-      const lat = parseNumber(getValue(r, ['latitude']));
-      const lon = parseNumber(getValue(r, ['longitude']));
-      if (!key || Number.isNaN(lat) || Number.isNaN(lon)) return;
-
-      map.set(key, { lat, lon, display });
-
-      const slugDisp = slugifyStation(display);
-      if (slugDisp && !map.has(slugDisp)) map.set(slugDisp, { lat, lon, display });
-
-      const addr = getValue(r, ['address']);
-      if (addr) {
-        const slugAddr = slugifyStation(addr);
-        if (slugAddr && !map.has(slugAddr)) map.set(slugAddr, { lat, lon, display });
-      }
-    });
-    return map;
-  }
-
-  function cacheStations(rows) {
-    stationRowsCache = rows;
-    try {
-      localStorage.setItem('returnTool_stations_runtime_v2', JSON.stringify(rows));
-      cacheState.textContent = 'aktiv';
-    } catch (e) {}
-  }
-
-  function parseGnssRow(row0) {
-    let row = row0;
-    if ((row0.vin ?? '').toString().includes(',') && !(row0.latitude || row0.lon || row0.longitude)) {
-      row = unpackRowIfPacked(row0, { a:'vin', b:'latitude', c:'longitude' });
-    }
-
-    const vin = (getValue(row, ['vin', 'vehicle_id']) || pickBySubstring(row, 'vin')).toString().trim();
-
-    const lat = parseNumber(
-      getValue(row, ['gnss latitude', 'gnss_latitude', 'gnss_log_lat', 'latitude', 'lat']) ||
-      pickBySubstring(row, 'latitude')
-    );
-    const lon = parseNumber(
-      getValue(row, ['gnss longitude', 'gnss_longitude', 'gnss_log_lon', 'longitude', 'lon']) ||
-      pickBySubstring(row, 'longitude')
-    );
-
-    const latUpdRaw = getValue(row, ['gnss_latitude_updated_at']) || pickBySubstring(row, 'gnss_latitude_updated_at');
-    const lonUpdRaw = getValue(row, ['gnss_longitude_updated_at']) || pickBySubstring(row, 'gnss_longitude_updated_at');
-
-    const latUpdMs = parseTimestampToMs(latUpdRaw);
-    const lonUpdMs = parseTimestampToMs(lonUpdRaw);
-
-    let tsMs = NaN;
-    if (Number.isFinite(latUpdMs) || Number.isFinite(lonUpdMs)) {
-      tsMs = Math.max(
-        Number.isFinite(latUpdMs) ? latUpdMs : -Infinity,
-        Number.isFinite(lonUpdMs) ? lonUpdMs : -Infinity
-      );
-    }
-
-    if (!vin || Number.isNaN(lat) || Number.isNaN(lon)) return null;
-    return { vin, lat, lon, tsMs };
-  }
-
-  function makeGnssMap(rows) {
-    const map = new Map();
-    rows.forEach((row) => {
-      const parsed = parseGnssRow(row);
-      if (!parsed) return;
-
-      const existing = map.get(parsed.vin);
-      if (!existing) { map.set(parsed.vin, parsed); return; }
-
-      const a = existing.tsMs;
-      const b = parsed.tsMs;
-
-      if (Number.isFinite(a) && Number.isFinite(b)) { if (b > a) map.set(parsed.vin, parsed); return; }
-      if (!Number.isFinite(a) && Number.isFinite(b)) { map.set(parsed.vin, parsed); return; }
-    });
-    return map;
-  }
-
-  function normalizeStationForFilter(s) {
-    return (s ?? '').toString().trim();
-  }
-
-  function filterRows(rows) {
-    let out = rows;
-    if (statusFilter.value !== 'all') out = out.filter(r => r.status === statusFilter.value);
-    if (stationFilter.value !== 'all') {
-      const chosen = stationFilter.value;
-      out = out.filter(r => normalizeStationForFilter(r.station) === chosen);
-    }
-    return out;
-  }
-
-  function applySorting(rows) {
-    const arr = rows.slice();
-    const statusOrder = { red: 0, yellow: 1, green: 2, unknown: 3 };
-    const sortMode = sortBy.value;
-
-    const num = (v) => {
-      const x = typeof v === 'number' ? v : Number.parseFloat((v ?? '').toString().replace(',', '.'));
-      return Number.isFinite(x) ? x : NaN;
+    // UI Elemente
+    const ui = {
+      modeRadios: document.getElementsByName('appMode'),
+      label1: document.getElementById('labelInput1'),
+      badge1: document.getElementById('badgeInput1'),
+      thresh1: document.getElementById('thresholdControls'),
+      thresh2: document.getElementById('thresholdControls2'),
+      btn: document.getElementById('generateBtn'),
+      inputs: {
+        booking: document.getElementById('bookingFile'),
+        stations: document.getElementById('stationFile'),
+        gnss: document.getElementById('gnssFile')
+      },
+      metas: {
+        booking: document.getElementById('bookingMeta'),
+        stations: document.getElementById('stationMeta'),
+        gnss: document.getElementById('gnssMeta')
+      },
+      err: document.getElementById('errorBox')
     };
 
-    if (sortMode === 'status') {
-      arr.sort((a, b) => (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9));
-      return arr;
-    }
-
-    if (sortMode === 'distance_asc' || sortMode === 'distance_desc') {
-      arr.sort((a, b) => {
-        const da = num(a.distanceKm);
-        const db = num(b.distanceKm);
-        const aValid = Number.isFinite(da);
-        const bValid = Number.isFinite(db);
-        if (aValid && !bValid) return -1;
-        if (!aValid && bValid) return 1;
-        if (!aValid && !bValid) return 0;
-        return sortMode === 'distance_asc' ? (da - db) : (db - da);
-      });
-      return arr;
-    }
-
-    if (sortMode === 'return_date') {
-      arr.sort((a, b) => (a.returnDate || '').localeCompare(b.returnDate || ''));
-      return arr;
-    }
-
-    if (sortMode === 'station') {
-      arr.sort((a, b) => (a.station || '').localeCompare(b.station || '', 'de'));
-      return arr;
-    }
-
-    return arr;
-  }
-
-  function rebuildStationFilterOptions(rows) {
-    const stations = Array.from(new Set(rows.map(r => normalizeStationForFilter(r.station)).filter(Boolean)))
-      .sort((a,b) => a.localeCompare(b, 'de'));
-
-    const current = stationFilter.value;
-    stationFilter.innerHTML = `<option value="all">Alle</option>` + stations.map(s => `<option value="${escapeHtmlAttr(s)}">${escapeHtml(s)}</option>`).join('');
-    stationFilter.value = stations.includes(current) ? current : 'all';
-  }
-
-  function renderSummary(rows) {
-    if (!rows.length) {
-      summary.innerHTML = `
-        <div class="summary-card">
-          <div class="summary-title">Noch keine Daten</div>
-          <div class="summary-sub">Dateien wählen → Ampel berechnen</div>
-        </div>`;
-      return;
-    }
-
-    const counts = rows.reduce((acc, row) => {
-      acc[row.status] = (acc[row.status] || 0) + 1;
-      acc.total += 1;
-      return acc;
-    }, { total: 0 });
-
-    const statusOrder = [
-      { key: 'red', label: 'ROT', className: 'red' },
-      { key: 'yellow', label: 'GELB', className: 'yellow' },
-      { key: 'green', label: 'GRÜN', className: 'green' },
-      { key: 'unknown', label: 'UNKNOWN', className: 'unknown' },
-    ];
-
-    const cards = [];
-    cards.push(`
-      <div class="summary-card">
-        <div class="summary-title">Gesamt</div>
-        <div class="summary-value">${counts.total}</div>
-        <div class="summary-sub">Fahrzeuge</div>
-      </div>
-    `);
-
-    statusOrder.forEach(({ key, label, className }) => {
-      const value = counts[key] || 0;
-      cards.push(`
-        <div class="summary-card">
-          <div class="summary-title"><span class="status ${className}">${label}</span></div>
-          <div class="summary-value">${value}</div>
-        </div>
-      `);
-    });
-
-    summary.innerHTML = cards.join('');
-  }
-
-  function escapeHtml(s){
-    return (s ?? '').toString()
-      .replace(/&/g,'&amp;')
-      .replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;')
-      .replace(/"/g,'&quot;')
-      .replace(/'/g,'&#39;');
-  }
-  function escapeHtmlAttr(s){ return escapeHtml(s); }
-
-  function renderTable(rows) {
-    const filtered = filterRows(rows);
-    const sorted = applySorting(filtered);
-
-    if (!sorted.length) {
-      tableHost.innerHTML = rows.length
-        ? '<div class="muted">Keine Einträge für den Filter.</div>'
-        : '<div class="muted">Keine Daten.</div>';
-      return;
-    }
-
-    const html = [];
-    html.push(`<div class="tablewrap"><table>
-      <thead><tr>
-        <th>Status</th>
-        <th>Wave</th>
-        <th>VIN</th>
-        <th>Booking Station</th>
-        <th>Matched Station</th>
-        <th>Distanz</th>
-        <th>Position</th>
-        <th>GNSS Updated</th>
-        <th>Return</th>
-        <th>Debug</th>
-      </tr></thead><tbody>`);
-
-    sorted.forEach((row) => {
-      const waveCell = row.waveUrl
-        ? `<a class="wave" href="${escapeHtmlAttr(row.waveUrl)}" target="_blank" rel="noopener">↗ Wave</a>`
-        : '—';
-
-      html.push(`<tr>
-        <td><span class="status ${row.status}">${row.status.toUpperCase()}</span></td>
-        <td>${waveCell}</td>
-        <td class="mono">${escapeHtml(row.vin || '')}</td>
-        <td>${escapeHtml(row.station || '')}</td>
-        <td>${escapeHtml(row.stationMatched || '')}</td>
-        <td>${escapeHtml(row.distanceLabel || '')}</td>
-        <td class="mono">${escapeHtml(row.location || '')}</td>
-        <td class="mono">${escapeHtml(row.gnssTime || '')}</td>
-        <td>${escapeHtml(row.returnDate || '')}</td>
-        <td class="small muted">${escapeHtml(row.debug || '')}</td>
-      </tr>`);
-    });
-
-    html.push('</tbody></table></div>');
-    tableHost.innerHTML = html.join('');
-  }
-
-  function downloadCsv(rows) {
-    const header = [
-      'status','vin','wave_url','station_booking','station_matched',
-      'distance_km','location_lat','location_lon',
-      'gnss_updated_at','gnss_age_days',
-      'return_date','debug'
-    ];
-    const esc = (v) => {
-      const s = (v ?? '').toString();
-      if (/[,"\n;]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-      return s;
-    };
-    const lines = [header.join(',')];
-    rows.forEach((r) => {
-      lines.push([
-        esc(r.status), esc(r.vin), esc(r.waveUrl),
-        esc(r.station), esc(r.stationMatched),
-        esc(r.distanceKm), esc(r.lat), esc(r.lon),
-        esc(r.gnssTime), esc(r.gnssAgeDays),
-        esc(r.returnDate), esc(r.debug)
-      ].join(','));
-    });
-    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'return_report.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  function setBusy(on, msg) {
-    spinner.style.display = on ? 'inline-block' : 'none';
-    statusMsg.textContent = msg || (on ? '…' : 'Bereit.');
-    generateBtn.disabled = on;
-  }
-
-  function setError(msg) {
-    errorBox.textContent = msg;
-    errorBox.style.display = msg ? 'block' : 'none';
-  }
-
-  function pickWaveUrlFromBookingRow(row) {
-    const direct = getValue(row, [
-      'wave url','wave_url','wave link','wave_link',
-      'booking url','booking_url','booking link','booking_link',
-      'wave','url','link'
-    ]);
-
-    const maybeWaveKey = Object.keys(row).find(k => k.includes('wave') && (k.includes('url') || k.includes('link') || k === 'wave'));
-    const maybeUrlKey  = Object.keys(row).find(k => (k.includes('url') || k.includes('link')) && k.includes('booking'));
-    const fallback = (maybeWaveKey ? row[maybeWaveKey] : '') || (maybeUrlKey ? row[maybeUrlKey] : '');
-
-    const url = (direct || fallback || '').toString().trim();
-    if (!url) return '';
-    if (/^https?:\/\//i.test(url)) return url;
-    return '';
-  }
-
-  async function generateReport() {
-    setError('');
-    tableHost.innerHTML = '<div class="muted">Berechne …</div>';
-    setBusy(true, 'Lese Dateien…');
-
+    // Check LocalStorage für Stations
+    // Check LocalStorage
     try {
-      if (!bookingInput.files.length || !gnssInput.files.length) {
-        throw new Error('Bitte Booking Return + Power BI/TCU Export auswählen.');
+      const cachedStations = localStorage.getItem('fm_stations_v1');
+      if (cachedStations) {
+        stationCache = JSON.parse(cachedStations);
+        ui.metas.stations.innerText = "💾 Stations from Cache (" + stationCache.length + ")";
+      }
+      const cachedGnss = localStorage.getItem('fm_gnss_v1');
+      if (cachedGnss) {
+        gnssCache = JSON.parse(cachedGnss);
+        ui.metas.gnss.innerText = "💾 GNSS from Cache (" + gnssCache.length + ")";
+      }
+    } catch (e) { console.warn("Cache Error", e); }
+
+    /* --- LOGIK: MODUS UMSCHALTEN --- */
+    function toggleMode() {
+      const mode = document.querySelector('input[name="appMode"]:checked').value;
+
+      // Swap Auto Files if available
+      if (typeof autoFiles !== 'undefined') {
+        const targetFile = (mode === 'security') ? autoFiles.security : autoFiles.return;
+        if (targetFile) {
+          const dt = new DataTransfer();
+          dt.items.add(targetFile);
+          ui.inputs.booking.files = dt.files;
+          ui.inputs.booking.dispatchEvent(new Event('change'));
+        }
       }
 
-      const bookingRows = await parseFile(bookingInput.files[0]);
+      if (mode === 'security') {
+        ui.label1.innerHTML = "📌 <strong>Vehicle List</strong> <br><small>(Cars without Booking / Away from Station)</small>";
+        ui.badge1.innerText = "Security Check";
+        ui.badge1.className = "badge bg-yellow";
+        ui.btn.innerText = "🛡️ Start Security Check";
 
-      let stationRows;
-      if (stationInput.files.length) {
-        stationRows = await parseFile(stationInput.files[0]);
-        cacheStations(stationRows);
-      } else if (stationRowsCache) {
-        stationRows = stationRowsCache;
+        // Configs
+        ui.thresh1.classList.add('disabled-area');
+        ui.thresh2.classList.add('disabled-area');
+        document.getElementById('secInputWrapper').classList.remove('disabled-area');
+
+        // Show/Hide inputs
+        document.querySelector('[data-drop="gnss"]').style.display = 'block';
+        document.querySelector('[data-drop="booking"]').style.display = 'block';
+
+      } else if (mode === 'unified') {
+        // UNIFIED MODE
+        ui.label1.innerHTML = "📌 <strong>Unified Fleet Export</strong> <br><small>(Combined Bookings & GPS)</small>";
+        ui.badge1.innerText = "Unified";
+        ui.badge1.className = "badge bg-blue"; // New color maybe?
+        ui.btn.innerText = "🚀 Run Unified Check";
+
+        // Configs: Enable all?
+        ui.thresh1.classList.remove('disabled-area');
+        ui.thresh2.classList.remove('disabled-area');
+        document.getElementById('secInputWrapper').classList.add('disabled-area');
+
+        // Hide GNSS input as it is inside the unified file
+        document.querySelector('[data-drop="gnss"]').style.display = 'none';
+        document.querySelector('[data-drop="booking"]').style.display = 'block';
+
       } else {
-        throw new Error('Bitte Stations-Datei einmal hochladen (wird dann gecached).');
+        // RETURN MODE
+        ui.label1.innerHTML = "📌 <strong>Vehicle List</strong> <br><small>(Returns Today)</small>";
+        ui.badge1.innerText = "Return Logic";
+        ui.badge1.className = "badge bg-green";
+        ui.btn.innerText = "🚦 Calculate Status";
+
+        // Configs
+        ui.thresh1.classList.remove('disabled-area');
+        ui.thresh2.classList.remove('disabled-area');
+        document.getElementById('secInputWrapper').classList.add('disabled-area');
+
+        // Show inputs
+        document.querySelector('[data-drop="gnss"]').style.display = 'block';
+        document.querySelector('[data-drop="booking"]').style.display = 'block';
       }
+    }
 
-      const gnssRows = await parseFile(gnssInput.files[0]);
+    /* --- CORE: BERECHNUNG --- */
+    async function generateReport() {
+      ui.err.innerText = '';
+      const mode = document.querySelector('input[name="appMode"]:checked').value;
+      setBusy(true);
 
-      const stationMap = makeStationMap(stationRows);
-      const latestGnss = makeGnssMap(gnssRows);
+      try {
+        // 1. Dateien parsen
+        const bookingRows = await getRows(ui.inputs.booking, 'Liste 1 (Vehicle List)');
 
-      const thresholds = {
-        green: parseNumber(greenThreshold.value),
-        yellow: parseNumber(yellowThreshold.value),
-      };
-      if (Number.isNaN(thresholds.green) || Number.isNaN(thresholds.yellow) || thresholds.green >= thresholds.yellow) {
-        throw new Error('Schwellwerte prüfen: grün < gelb.');
-      }
-
-      setBusy(true, 'Berechne…');
-
-      let staleCount = 0;
-      let noTsCount = 0;
-
-      const results = bookingRows.map((row) => {
-        const vin = (getValue(row, ['vin','vehicle_id']) || pickBySubstring(row, 'vin')).toString().trim();
-        const stationBooking = (getValue(row, ['station']) || pickBySubstring(row, 'station')).toString().trim();
-        const returnDate = normalizeDate(getValue(row, ['booking return date','return date','date']) || pickBySubstring(row,'return'));
-        const waveUrl = pickWaveUrlFromBookingRow(row);
-
-        const stationKey1 = stationBooking.toLowerCase();
-        const stationKey2 = slugifyStation(stationBooking);
-        const station = stationMap.get(stationKey1) || stationMap.get(stationKey2);
-
-        const gnss = vin ? latestGnss.get(vin) : undefined;
-
-        const debug = [];
-        if (!station) debug.push(`Station nicht gefunden (${stationBooking})`);
-        if (!vin) debug.push('VIN fehlt');
-
-        let gnssFresh = true;
-        let gnssTime = '';
-        let gnssAgeDays = '';
-
-        if (vin && !gnss) {
-          debug.push('Keine GNSS für VIN');
-          gnssFresh = false;
-        } else if (gnss) {
-          if (!Number.isFinite(gnss.tsMs)) {
-            gnssFresh = false;
-            noTsCount += 1;
-            debug.push('GNSS Timestamp fehlt');
+        // GNSS Handling (File or Cache)
+        let gnssRows = [];
+        if (mode !== 'unified') {
+          if (ui.inputs.gnss.files.length > 0) {
+            gnssRows = await getRows(ui.inputs.gnss, 'GNSS Export');
+            gnssCache = gnssRows;
+            try { localStorage.setItem('fm_gnss_v1', JSON.stringify(gnssRows)); } catch (e) { console.warn("GNSS Cache full?"); }
+          } else if (gnssCache) {
+            gnssRows = gnssCache;
           } else {
-            gnssTime = formatDateTime(gnss.tsMs);
-
-            const refMs = Number.isFinite(parseISODateToUtcMs(returnDate))
-              ? parseISODateToUtcMs(returnDate)
-              : Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 0, 0, 0);
-
-            const ageDays = (refMs - gnss.tsMs) / (24 * 3600 * 1000);
-            gnssAgeDays = Number.isFinite(ageDays) ? ageDays.toFixed(2) : '';
-
-            gnssFresh = isGnssFreshRelativeToReturn(gnss.tsMs, returnDate);
-            if (!gnssFresh) {
-              staleCount += 1;
-              debug.push(`GNSS zu alt (${gnssTime})`);
-            }
+            throw new Error("Bitte GNSS/TCU Liste hochladen.");
           }
         }
 
-        let distance = null;
-        if (station && gnss && gnssFresh) distance = haversineKm(station.lat, station.lon, gnss.lat, gnss.lon);
+        // Station Handling (File or Cache)
+        let stationRows = [];
+        if (ui.inputs.stations.files.length > 0) {
+          stationRows = await getRows(ui.inputs.stations, 'Stations');
+          stationCache = stationRows;
+          localStorage.setItem('fm_stations_v1', JSON.stringify(stationRows));
+        } else if (stationCache) {
+          stationRows = stationCache;
+        } else {
+          throw new Error("Bitte Stations-Liste hochladen.");
+        }
 
-        let classification = classify(distance, thresholds);
-        if (!gnssFresh) classification = { status: 'unknown', label: 'GNSS zu alt/fehlt' };
+        // 2. Maps bauen
+        const stations = buildStationMap(stationRows);
+        let gnss = new Map();
 
-        return {
-          status: classification.status,
-          vin,
-          waveUrl,
-          station: stationBooking,
-          stationMatched: station ? station.display : '',
-          distanceKm: distance != null && !Number.isNaN(distance) ? distance.toFixed(2) : '',
-          distanceLabel: classification.label,
-          lat: (gnss && gnssFresh) ? (gnss.lat ?? '') : '',
-          lon: (gnss && gnssFresh) ? (gnss.lon ?? '') : '',
-          location: (gnss && gnssFresh) ? `${gnss.lat.toFixed(5)}, ${gnss.lon.toFixed(5)}` : '–',
-          gnssTime,
-          gnssAgeDays,
-          returnDate,
-          debug: debug.join(' | ')
+        if (mode === 'unified') {
+          // UNIFIED MODE: Get GPS from Main List
+          bookingRows.forEach(r => {
+            const vin = findVal(r, ['vin', 'vehicle_id', 'fahrgestellnummer', 'tcu_data - vin']);
+            const latStr = findVal(r, ['lat', 'gnss_lat', 'latitude', 'gps_latitude']);
+            const lonStr = findVal(r, ['lon', 'gnss_lon', 'longitude', 'gps_longitude']);
+
+            if (vin && latStr) {
+              const lat = parseCoordinate(latStr);
+              const lon = parseCoordinate(lonStr);
+              const time = findVal(r, ['updated', 'time', 'timestamp', 'gps_timestamp', 'return_date']);
+              if (!isNaN(lat)) gnss.set(vin, { lat, lon, time });
+            }
+          });
+        } else {
+          gnss = buildGnssMap(gnssRows);
+        }
+        const thresholds = {
+          green: parseFloat(document.getElementById('greenInput').value) || 200,
+          yellow: parseFloat(document.getElementById('yellowInput').value) || 1000,
+          sec: parseFloat(document.getElementById('secInput').value) || 15
         };
+
+        // AUTO-INJECT LOGIC: Check for window.reportData
+        if (typeof window.reportData !== 'undefined') {
+          // Check if we need to merge injected data with manually uploaded/cached
+          // For now, if injected data exists, we prefer it or merge it?
+          // Let's assume automation provides raw rows if possible, or we parse them here if they are passed as strings.
+          // Actually, automation script will likely produce standard JSON objects if we do it right.
+        }
+
+        // 3. Haupt-Loop
+        const result = bookingRows.map(row => {
+          // Flexible Spaltennamen finden
+          const vin = findVal(row, ['vin', 'vehicle_id', 'fahrgestellnummer']);
+          const stationName = findVal(row, ['station', 'home_station', 'return_station', 'station_name']);
+
+          // Zusätzliche Infos (je nach Modus)
+          let infoText = "";
+          let dateInfo = "";
+
+          // Fix mileage parsing (Smart check for DE vs US)
+          let milRaw = findVal(row, ['km', 'mileage', 'kilometerstand', 'km_stand']);
+          let mileage = 0;
+          if (milRaw) {
+            let clean = milRaw.toString().trim();
+            // Scenario 1: "11.957" (DE) -> 11957. Scenario 2: "83889.0" (US Float) -> 83889
+            if (clean.match(/^\d+$/)) {
+              mileage = parseFloat(clean);
+            } else if (clean.match(/^\d+\.0+$/)) {
+              mileage = parseFloat(clean); // "83889.0" -> 83889
+            } else if (clean.includes('.') && !clean.includes(',')) {
+              // Formatting like 11.957 (DE) or 11.9 (dist)
+              // If it looks like thousands (3 digits after dot), assume DE
+              // But if value would be tiny (<200) assuming US, and large (>1000) assuming DE, pick DE
+              if (clean.match(/\.\d{3}$/) || clean.match(/\.\d{3}\./)) {
+                mileage = parseFloat(clean.replace(/\./g, ''));
+              } else {
+                mileage = parseFloat(clean); // fallback
+              }
+            } else {
+              // Maybe "10.000,50" -> remove dot, replace comma
+              mileage = parseFloat(clean.replace(/\./g, '').replace(',', '.'));
+            }
+          }
+          if (isNaN(mileage)) mileage = 0;
+
+          // Common fields
+          const eventType = findVal(row, ['event type', 'event_type']);
+          const eventNote = findVal(row, ['event note', 'event_note', 'remark', 'grund', 'block_reason']);
+          const eventEnd = findVal(row, ['event end date', 'event_end_date']);
+
+          if (mode === 'security') {
+            // Im Security Modus: Priorisiere Event Info, ignoriere generisches 'status'="IN_FLEET"
+            const reason = findVal(row, ['block_reason', 'grund', 'remark']);
+            // Wave Link auch im Security Modus anzeigen
+            const url = findVal(row, ['url', 'wave_url', 'link', 'link to wave']);
+
+            let parts = [];
+            if (eventType) parts.push(`<strong>${eventType}</strong>`);
+            if (eventNote) parts.push(`<span style="font-size:0.85em; color:var(--muted)">${eventNote}</span>`);
+            if (eventEnd) parts.push(`<span style="font-size:0.8em">Bis: ${formatDate(eventEnd)}</span>`);
+            if (url) parts.push(`<a href="${url}" target="_blank" class="wave-btn" title="Open in Wave">🌊</a>`);
+
+            if (parts.length > 0) {
+              infoText = parts.join('<br>');
+            } else if (reason && reason !== 'IN_FLEET') {
+              infoText = reason;
+            } else {
+              infoText = "–";
+            }
+          } else {
+            // Im Return Modus nach Datum und Wave-Link
+            const date = findVal(row, ['date', 'return_date', 'booking_return_date', 'event end date', 'event_end_date']);
+            const url = findVal(row, ['url', 'wave_url', 'link', 'link to wave']);
+
+            let extra = "";
+            if (eventType) extra = `<br><small>${eventType}</small>`;
+
+            infoText = url ? `<a href="${url}" target="_blank" class="wave-btn" title="Open in Wave">🌊</a>${extra}` : (eventType || "");
+            dateInfo = date ? formatDate(date) : "";
+          }
+
+          // Station matchen
+          const stationObj = matchStation(stationName, stations);
+
+          // GNSS holen
+          const carGps = gnss.get(vin);
+
+          let dist = null;
+          let status = 'unknown';
+          let distLabel = '–';
+          let debug = [];
+
+          if (!vin) debug.push("Keine VIN");
+          if (!stationObj) debug.push("Station unbekannt: " + stationName);
+          if (!carGps) debug.push("Kein GPS Signal");
+
+          // Distanz berechnen
+          if (stationObj && carGps && carGps.lat && carGps.lon) {
+
+            // Check for valid lat/lon (prevent 0,0 or near zero)
+            if (Math.abs(carGps.lat) < 1 && Math.abs(carGps.lon) < 1) {
+              debug.push("Invalid GPS (0,0)");
+            } else {
+              // Check Time (Night Filter: 20:00 - 07:00)
+              const gpsDate = parseDateVal(carGps.time);
+              let isNight = true;
+              if (gpsDate) {
+                const h = gpsDate.getHours();
+                if (h >= 7 && h < 20) isNight = false;
+              }
+
+              dist = haversine(stationObj.lat, stationObj.lon, carGps.lat, carGps.lon);
+              distLabel = dist.toFixed(1) + " km";
+
+              // --- ENTSCHEIDUNGS-LOGIK ---
+              if (mode === 'security') {
+                // SECURITY MODE (Only strict 'security' mode uses night filter)
+                if (gpsDate && !isNight) {
+                  status = 'unknown'; // Ignoriere Tagsüber
+                  distLabel += " ☀️";
+                  debug.push("Tagsüber");
+                } else {
+                  if (dist <= thresholds.sec) {
+                    status = 'green';
+                  } else {
+                    status = 'red';
+                    distLabel = "⚠️ " + distLabel;
+                  }
+                }
+              } else {
+                // RETURN MODE & UNIFIED MODE: Alles nah ist grün
+                if (dist <= thresholds.green) status = 'green';
+                else if (dist <= thresholds.yellow) status = 'yellow';
+                else status = 'red';
+              }
+            }
+          }
+
+          // Coord Label (Car Only)
+          const coordLabel = carGps ? `${carGps.lat.toFixed(5)}, ${carGps.lon.toFixed(5)}` : '-';
+
+          // Station Coords
+          const stationCoords = stationObj ? `(${stationObj.lat.toFixed(3)}, ${stationObj.lon.toFixed(3)})` : '';
+
+          return {
+            vin,
+            stationName,
+            matchedStation: stationObj ? stationObj.name : '-',
+            gpsTime: carGps ? formatDate(carGps.time) : '-',
+            dist,
+            distLabel,
+            status,
+            infoText,
+            dateInfo,
+            mileage,
+            coordLabel,
+            stationCoords,
+            debug: debug.join(', ')
+          };
+        });
+
+        lastData = result;
+        renderTable();
+        document.getElementById('exportBtn').disabled = false;
+
+      } catch (e) {
+        ui.err.innerText = "Fehler: " + e.message;
+        console.error(e);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    /* --- HELPER FUNCTIONS --- */
+
+    function parseCoordinate(val) {
+      if (!val) return NaN;
+      let s = val.toString().replace(/[°]/g, '').trim();
+      // Match decimal numbers: 50.12421000, -115.16605000, etc.
+      const match = s.match(/([-+]?\d+\.?\d*)/);
+      if (!match) return NaN;
+      let num = parseFloat(match[1].replace(',', '.'));
+      if (/[SW]/i.test(s)) num = -Math.abs(num);
+      return num;
+    }
+
+    function parseDateVal(val) {
+      if (!val) return null;
+      if (val instanceof Date) return val;
+      // Handle numeric strings like "46057.123" by converting to number
+      const num = Number(val);
+      if (!isNaN(num) && num > 20000 && num < 60000) {
+        return new Date((num - 25569) * 86400 * 1000);
+      }
+      const d = new Date(val);
+      return isNaN(d) ? null : d;
+    }
+
+    function formatDate(val) {
+      const d = parseDateVal(val);
+      if (!d) return val || "";
+      return d.toLocaleDateString("de-DE") + " " + d.toLocaleTimeString("de-DE", { hour: '2-digit', minute: '2-digit' });
+    }
+
+
+
+    // Sucht einen Wert in einem Objekt basierend auf mehreren möglichen Spaltennamen
+    function findVal(row, candidates) {
+      const keys = Object.keys(row);
+      for (let c of candidates) {
+        const found = keys.find(k => k.toLowerCase().includes(c));
+        if (found && row[found]) return row[found].toString().trim();
+      }
+      return "";
+    }
+
+    function matchStation(rawName, map) {
+      if (!rawName) return null;
+      const key = rawName.toLowerCase().trim();
+      // 1. Exakter Match
+      if (map.has(key)) return map.get(key);
+      // 2. Slug Match (Sonderzeichen weg)
+      const slug = key.replace(/[^a-z0-9]/g, '');
+      for (let [k, v] of map) {
+        if (k.replace(/[^a-z0-9]/g, '') === slug) return v;
+      }
+      return null;
+    }
+
+    function buildStationMap(rows) {
+      const m = new Map();
+      rows.forEach(r => {
+        const name = findVal(r, ['station', 'name', 'city']);
+        let lat = parseCoordinate(findVal(r, ['lat', 'breite', 'latitude']));
+        let lon = parseCoordinate(findVal(r, ['lon', 'länge', 'long', 'longitude']));
+        let swapped = false;
+
+        // HEURISTIC: Fix swapped headers in Stations_Merged.csv
+        // If Lat is actually Lon (small, e.g. 10) and Lon is actually Lat (large, e.g. 50) relative to Europe
+        // Or if Lat is > 90 (impossible, implies it's a US Longitude like -115)
+        if (!isNaN(lat) && !isNaN(lon)) {
+          if (Math.abs(lat) > 90 || (Math.abs(lat) < 30 && Math.abs(lon) > 30)) {
+            const tmp = lat;
+            lat = lon;
+            lon = tmp;
+            swapped = true;
+          }
+        }
+
+        if (name && !isNaN(lat) && !isNaN(lon)) {
+          m.set(name.toLowerCase(), { name, lat, lon, swapped });
+        }
+      });
+      return m;
+    }
+
+    function buildGnssMap(rows) {
+      const m = new Map();
+      rows.forEach(r => {
+        const vin = findVal(r, ['vin', 'vehicle']);
+        const lat = parseCoordinate(findVal(r, ['lat', 'gnss_lat']));
+        const lon = parseCoordinate(findVal(r, ['lon', 'gnss_lon']));
+        const time = findVal(r, ['updated', 'time', 'timestamp']);
+        if (vin) m.set(vin, { lat, lon, time });
+      });
+      return m;
+    }
+
+    function haversine(lat1, lon1, lat2, lon2) {
+      const R = 6371; // Erdradius km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    /* --- DATEI HANDLING --- */
+    async function getRows(input, label) {
+      if (!input.files.length) return []; // Optional, außer es wird geprüft
+      const file = input.files[0];
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data);
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(sheet);
+      if (!json.length) throw new Error(label + " ist leer oder nicht lesbar.");
+      return json;
+    }
+
+    // Meta Anzeige bei Datei-Auswahl
+    Object.values(ui.inputs).forEach(inp => {
+      inp.addEventListener('change', (e) => {
+        const span = e.target.nextElementSibling;
+        if (e.target.files[0]) span.innerText = "📄 " + e.target.files[0].name;
+      });
+    });
+
+    /* --- RENDERING --- */
+    function renderTable() {
+      const host = document.getElementById('tableHost');
+      const summary = document.getElementById('summary');
+      const filter = document.getElementById('filterStatus').value;
+
+      if (!lastData.length) {
+        host.innerHTML = '<div style="text-align:center; padding:20px; color:var(--muted)">Keine Daten berechnet.</div>';
+        return;
+      }
+
+      // Filter
+      const filtered = lastData.filter(d => filter === 'all' || d.status === filter);
+
+      const sortMode = document.getElementById('sortMode').value;
+
+      // Sortierung
+      // Sortierung
+      filtered.sort((a, b) => {
+        if (sortMode === 'dist_desc') {
+          return (b.dist || 0) - (a.dist || 0); // Far to Near
+        }
+        if (sortMode === 'dist_asc') {
+          return (a.dist || 0) - (b.dist || 0); // Near to Far
+        }
+        // Default: Rot oben
+        const score = { red: 0, yellow: 1, green: 2, unknown: 3 };
+        return score[a.status] - score[b.status];
       });
 
-      lastReport = results;
+      // Summary Cards
+      const counts = { red: 0, yellow: 0, green: 0, unknown: 0 };
+      lastData.forEach(d => counts[d.status] = (counts[d.status] || 0) + 1);
 
-      rebuildStationFilterOptions(results);
-      renderSummary(results);
-      renderTable(results);
+      summary.innerHTML = `
+    <div class="sum-card" style="border-bottom:4px solid var(--bad)">
+      <div class="sum-val">${counts.red}</div>
+      <div class="sum-lbl">ALARM / ROT</div>
+    </div>
+    <div class="sum-card" style="border-bottom:4px solid var(--warn)">
+      <div class="sum-val">${counts.yellow}</div>
+      <div class="sum-lbl">GELB</div>
+    </div>
+    <div class="sum-card" style="border-bottom:4px solid var(--ok)">
+      <div class="sum-val">${counts.green}</div>
+      <div class="sum-lbl">OK / GRÜN</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-val">${counts.unknown}</div>
+      <div class="sum-lbl">Unbekannt</div>
+    </div>
+  `;
 
-      downloadBtn.disabled = !results.length;
+      // Table HTML
+      let html = `<table><thead><tr>
+    <th>Status</th>
+    <th>VIN</th>
+    <th>Return Station</th>
+    <th>Distance</th>
+    <th>Link</th>
+    <th>Coordinates</th>
+    <th>GPS Time</th>
+    <th>Debug</th>
+  </tr></thead><tbody>`;
 
-      const bits = [];
-      if (staleCount) bits.push(`${staleCount}× GNSS zu alt`);
-      if (noTsCount) bits.push(`${noTsCount}× ohne Timestamp`);
-      const extra = bits.length ? ` · (${bits.join(', ')})` : '';
+      filtered.forEach(row => {
+        let badgeClass = 'bg-grey';
+        if (row.status === 'red') badgeClass = 'bg-red';
+        if (row.status === 'yellow') badgeClass = 'bg-yellow';
+        if (row.status === 'green') badgeClass = 'bg-green';
 
-      setBusy(false, `Fertig: ${results.length} · Stations: ${stationMap.size} · GNSS: ${latestGnss.size}${extra}`);
-    } catch (err) {
-      console.error(err);
-      setError(err.message || String(err));
-      tableHost.innerHTML = '<div class="muted">Fehler beim Verarbeiten.</div>';
-      setBusy(false, 'Bereit.');
+        let stationDisplay = row.stationName;
+        if (row.matchedStation && row.matchedStation !== '-' && row.matchedStation.toLowerCase() !== row.stationName.toLowerCase()) {
+          stationDisplay += ` <small style="color:var(--muted)">(${row.matchedStation})</small>`;
+        }
+        if (row.stationCoords) {
+          stationDisplay += `<br><small style="color:var(--muted); font-size:0.75rem">${row.stationCoords}</small>`;
+        }
+
+        html += `<tr>
+      <td><span class="status-dot ${badgeClass}" title="${row.status.toUpperCase()}"></span></td>
+      <td class="mono">${row.vin}</td>
+      <td>${stationDisplay}</td>
+      <td style="font-weight:bold">${row.distLabel}</td>
+      <td>${row.infoText}</td>
+      <td class="mono" style="font-size:0.75rem">${row.coordLabel}</td>
+      <td class="mono" style="font-size:0.8rem">${row.gpsTime}</td>
+      <td style="font-size:0.75rem; color:var(--muted)">${row.debug}</td>
+    </tr>`;
+      });
+      html += '</tbody></table>';
+      host.innerHTML = `<div class="tablewrap">${html}</div>`;
     }
-  }
 
-  function setMeta(el, file, fallbackText) {
-    if (!file) { el.textContent = fallbackText || 'Keine Datei gewählt.'; return; }
-    el.innerHTML = `<span class="badge">📄 ${file.name}</span><span class="badge">≈ ${(file.size/1024).toFixed(0)} KB</span>`;
-  }
+    function exportCsv() {
+      if (!lastData.length) return;
+      const header = ["VIN", "Soll_Station", "Matched_Station", "Distanz_km", "Status", "Info", "GPS_Time", "Debug"];
+      const rows = lastData.map(r => [r.vin, r.stationName, r.matchedStation, r.dist ? r.dist.toFixed(3) : '', r.status, r.infoText.replace(/<[^>]*>/g, ''), r.gpsTime, r.debug]);
 
-  bookingInput.addEventListener('change', () => setMeta(bookingMeta, bookingInput.files[0], 'Keine Datei gewählt.'));
-  stationInput.addEventListener('change', () => setMeta(stationMeta, stationInput.files[0], 'Keine Datei gewählt (Cache wird genutzt, falls vorhanden).'));
-  gnssInput.addEventListener('change', () => setMeta(gnssMeta, gnssInput.files[0], 'Keine Datei gewählt.'));
+      const csvContent = [header.join(";")].concat(rows.map(e => e.join(";"))).join("\n");
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "fleet_report.csv");
+      document.body.appendChild(link);
+      link.click();
+    }
 
-  function wireDrop(zoneKey, input) {
-    const zone = document.querySelector(`.drop[data-drop="${zoneKey}"]`);
-    if (!zone) return;
 
-    const onDrag = (e) => { e.preventDefault(); zone.classList.add('dragover'); };
-    const onLeave = () => zone.classList.remove('dragover');
-    const onDrop = (e) => {
-      e.preventDefault();
-      zone.classList.remove('dragover');
-      const file = e.dataTransfer.files && e.dataTransfer.files[0];
-      if (!file) return;
-      const dt = new DataTransfer();
-      dt.items.add(file);
-      input.files = dt.files;
-      input.dispatchEvent(new Event('change'));
-    };
 
-    zone.addEventListener('dragenter', onDrag);
-    zone.addEventListener('dragover', onDrag);
-    zone.addEventListener('dragleave', onLeave);
-    zone.addEventListener('drop', onDrop);
-  }
-  wireDrop('booking', bookingInput);
-  wireDrop('stations', stationInput);
-  wireDrop('gnss', gnssInput);
+    function setBusy(isBusy) {
+      document.getElementById('spinner').style.display = isBusy ? 'inline-block' : 'none';
+      ui.btn.disabled = isBusy;
+    }
 
-  function downloadTextFile(name, content) {
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = name;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+    /* --- AUTO LOAD LOGIC --- */
+    function b64toBlob(b64Data, contentType = '', sliceSize = 512) {
+      const byteCharacters = atob(b64Data);
+      const byteArrays = [];
+      for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+        const slice = byteCharacters.slice(offset, offset + sliceSize);
+        const byteNumbers = new Array(slice.length);
+        for (let i = 0; i < slice.length; i++) {
+          byteNumbers[i] = slice.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        byteArrays.push(byteArray);
+      }
+      return new Blob(byteArrays, { type: contentType });
+    }
 
-  downloadTemplatesBtn.addEventListener('click', () => {
-    const bookingTpl =
-      'vin,station,booking return date,wave_url\n' +
-      'WVWZZZ00000000000,Hamburg,2025-12-23,https://example.com/wave/booking/123\n';
+    // Store auto-loaded blobs to swap them on mode change
+    let autoFiles = { return: null, security: null };
 
-    const stationsTpl =
-      'station_key,station_display,address,latitude,longitude\n' +
-      'hamburg,Hamburg,"Musterstraße 1, 20095 Hamburg",53.5511,9.9937\n';
+    window.addEventListener('DOMContentLoaded', () => {
+      if (typeof window.reportData !== 'undefined') {
+        console.log("🤖 Auto-loading data found.");
 
-    const gnssTpl =
-      'vin,latitude,longitude,gnss_latitude_updated_at,gnss_longitude_updated_at\n' +
-      'WVWZZZ00000000000,53.55,10.01,2025-12-22 20:15:00,2025-12-22 20:15:00\n';
+        const loadInput = (key, inputId, mime) => {
+          if (window.reportData[key]) {
+            try {
+              const item = window.reportData[key];
+              const blob = b64toBlob(item.data, mime);
+              const file = new File([blob], item.name, { type: mime });
 
-    downloadTextFile('template_booking.csv', bookingTpl);
-    downloadTextFile('template_stations_runtime.csv', stationsTpl);
-    downloadTextFile('template_gnss.csv', gnssTpl);
-  });
+              const dt = new DataTransfer();
+              dt.items.add(file);
+              document.getElementById(inputId).files = dt.files;
+              document.getElementById(inputId).dispatchEvent(new Event('change'));
+              return file;
+            } catch (e) { console.error("AutoLoad Error " + key, e); }
+          }
+          return null;
+        };
 
-  generateBtn.addEventListener('click', generateReport);
-  downloadBtn.addEventListener('click', () => { if (lastReport.length) downloadCsv(lastReport); });
+        // Load Static
+        loadInput('tcu', 'gnssFile', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        loadInput('stations', 'stationFile', 'text/csv');
 
-  function rerender(){ renderTable(lastReport); }
-  statusFilter.addEventListener('change', rerender);
-  stationFilter.addEventListener('change', rerender);
-  sortBy.addEventListener('change', rerender);
-</script>
+        // Prepare Pre-loaded files for modes
+        if (window.reportData['bookings']) {
+          // Create file object but dont assign yet dependent on mode
+          const item = window.reportData['bookings'];
+          const blob = b64toBlob(item.data, 'text/csv');
+          autoFiles.return = new File([blob], item.name, { type: 'text/csv' });
+        }
+        if (window.reportData['cars']) {
+          const item = window.reportData['cars'];
+          const blob = b64toBlob(item.data, 'text/csv');
+          autoFiles.security = new File([blob], item.name, { type: 'text/csv' });
+        }
+
+        // Initial Load (Default Return)
+        if (autoFiles.return) {
+          const dt = new DataTransfer();
+          dt.items.add(autoFiles.return);
+          document.getElementById('bookingFile').files = dt.files;
+          document.getElementById('bookingFile').dispatchEvent(new Event('change'));
+        }
+
+        // Auto Run?
+        // setTimeout(generateReport, 500);
+      }
+    });
+
+  </script>
 </body>
+
 </html>

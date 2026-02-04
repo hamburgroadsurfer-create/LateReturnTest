@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚐 Return Feasibility Check</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --teal: #6bbbae;
+            --teal-dark: #5aa99c;
+            --teal-light: #e8f5f3;
+            --green: #22c55e;
+            --yellow: #eab308;
+            --red: #ef4444;
+            --gray: #6b7280;
+            --dark: #1f2937;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--dark);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--teal) 0%, var(--teal-dark) 100%);
+            color: white;
+            padding: 24px 32px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .header h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            margin-top: 4px;
+            font-size: 0.9rem;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* File Upload Section */
+        .upload-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .upload-card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            border: 2px dashed #e2e8f0;
+            transition: all 0.2s;
+        }
+
+        .upload-card:hover {
+            border-color: var(--teal);
+        }
+
+        .upload-card.has-file {
+            border-color: var(--green);
+            border-style: solid;
+            background: #f0fdf4;
+        }
+
+        .upload-card label {
+            font-weight: 600;
+            color: var(--dark);
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .upload-card input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            cursor: pointer;
+        }
+
+        .file-name {
+            font-size: 0.85rem;
+            color: var(--green);
+            margin-top: 8px;
+            font-weight: 500;
+        }
+
+        /* Button */
+        .btn {
+            background: var(--teal);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            background: var(--teal-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--gray);
+            border: 1px solid #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+            background: #f1f5f9;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--gray);
+            margin-top: 4px;
+        }
+
+        .stat-card.green .stat-value {
+            color: var(--green);
+        }
+
+        .stat-card.yellow .stat-value {
+            color: var(--yellow);
+        }
+
+        .stat-card.red .stat-value {
+            color: var(--red);
+        }
+
+        .stat-card.unknown .stat-value {
+            color: var(--gray);
+        }
+
+        /* Table */
+        .table-card {
+            background: var(--card);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .table-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .filters {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .filters select {
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            background: white;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th,
+        td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: var(--gray);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            position: sticky;
+            top: 0;
+        }
+
+        tr:hover {
+            background: #f8fafc;
+        }
+
+        /* Status Badges */
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge.green {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge.yellow {
+            background: #fef9c3;
+            color: #854d0e;
+        }
+
+        .badge.red {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge.unknown {
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+
+        /* Time Badge */
+        .time-info {
+            font-size: 0.85rem;
+            color: var(--gray);
+        }
+
+        .time-info .time {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        /* Debug Panel */
+        .debug-panel {
+            background: #1e293b;
+            color: #94a3b8;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 24px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.8rem;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .debug-panel.show {
+            display: block;
+        }
+
+        .debug-line {
+            padding: 2px 0;
+        }
+
+        .debug-line .time {
+            color: #64748b;
+        }
+
+        .debug-line .success {
+            color: #4ade80;
+        }
+
+        .debug-line .error {
+            color: #f87171;
+        }
+
+        .debug-line .info {
+            color: #60a5fa;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--gray);
+        }
+
+        .empty-state .icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                padding: 16px 20px;
+            }
+
+            .header h1 {
+                font-size: 1.25rem;
+            }
+
+            .container {
+                padding: 16px;
+            }
+
+            th,
+            td {
+                padding: 8px 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <h1>🚐 Return Feasibility Check</h1>
+        <p>Automatische Prüfung der Fahrzeug-Rückgaben basierend auf GPS-Positionen</p>
+    </header>
+
+    <div class="container">
+        <!-- Upload Section -->
+        <div class="upload-section">
+            <div class="upload-card" id="vehicleCard">
+                <label>📋 Fahrzeug-Liste</label>
+                <input type="file" id="vehicleFile" accept=".csv,.xlsx">
+                <div class="file-name" id="vehicleFileName"></div>
+            </div>
+            <div class="upload-card" id="stationsCard">
+                <label>📍 Stations-Liste</label>
+                <input type="file" id="stationsFile" accept=".csv,.xlsx">
+                <div class="file-name" id="stationsFileName"></div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="actions">
+            <button class="btn" id="calculateBtn">📊 Berechnen</button>
+            <button class="btn btn-secondary" id="debugBtn">🛠️ Debug</button>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid" id="statsGrid" style="display: none;"></div>
+
+        <!-- Results Table -->
+        <div class="table-card" id="tableCard" style="display: none;">
+            <div class="table-header">
+                <span class="table-title">Ergebnisse</span>
+                <div class="filters">
+                    <select id="filterStatus">
+                        <option value="all">Alle Status</option>
+                        <option value="green">🟢 Grün</option>
+                        <option value="yellow">🟡 Gelb</option>
+                        <option value="red">🔴 Rot</option>
+                        <option value="unknown">⚪ Unbekannt</option>
+                    </select>
+                    <select id="sortBy">
+                        <option value="status">Sortieren: Status</option>
+                        <option value="distance-desc">Distanz: Größte zuerst</option>
+                        <option value="distance-asc">Distanz: Kleinste zuerst</option>
+                        <option value="station">Sortieren: Station</option>
+                        <option value="time">Sortieren: Zeit</option>
+                    </select>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Wave</th>
+                            <th>VIN</th>
+                            <th>Kategorie</th>
+                            <th>Return Station</th>
+                            <th>Rückgabe (Lokal)</th>
+                            <th>Distanz</th>
+                            <th>GPS Zeit</th>
+                            <th>Position</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state" id="emptyState">
+            <div class="icon">📂</div>
+            <p>Bitte wählen Sie die Fahrzeug- und Stations-Dateien</p>
+        </div>
+
+        <!-- Debug Panel -->
+        <div class="debug-panel" id="debugPanel"></div>
+    </div>
+
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script>
+        // Elements
+        const vehicleFile = document.getElementById('vehicleFile');
+        const stationsFile = document.getElementById('stationsFile');
+        const vehicleCard = document.getElementById('vehicleCard');
+        const stationsCard = document.getElementById('stationsCard');
+        const vehicleFileName = document.getElementById('vehicleFileName');
+        const stationsFileName = document.getElementById('stationsFileName');
+        const calculateBtn = document.getElementById('calculateBtn');
+        const debugBtn = document.getElementById('debugBtn');
+        const debugPanel = document.getElementById('debugPanel');
+        const statsGrid = document.getElementById('statsGrid');
+        const tableCard = document.getElementById('tableCard');
+        const tableBody = document.getElementById('tableBody');
+        const emptyState = document.getElementById('emptyState');
+        const filterStatus = document.getElementById('filterStatus');
+
+        let allResults = [];
+        let cachedStationMap = null; // Station cache
+        let cachedStationFileName = '';
+
+        // Capitalize first letter of each word
+        function capitalize(str) {
+            if (!str) return '';
+            return str.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        }
+
+        // File input styling
+        vehicleFile.addEventListener('change', () => {
+            if (vehicleFile.files[0]) {
+                vehicleCard.classList.add('has-file');
+                vehicleFileName.textContent = '✓ ' + vehicleFile.files[0].name;
+            }
+        });
+        stationsFile.addEventListener('change', () => {
+            if (stationsFile.files[0]) {
+                stationsCard.classList.add('has-file');
+                stationsFileName.textContent = '✓ ' + stationsFile.files[0].name;
+            }
+        });
+
+        // Debug toggle
+        debugBtn.addEventListener('click', () => debugPanel.classList.toggle('show'));
+
+        function log(msg, type = 'info') {
+            const time = new Date().toLocaleTimeString();
+            debugPanel.innerHTML += `<div class="debug-line"><span class="time">${time}</span> <span class="${type}">${msg}</span></div>`;
+            debugPanel.scrollTop = debugPanel.scrollHeight;
+            console.log(msg);
+        }
+
+        // Parse file
+        async function parseFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                        resolve(XLSX.utils.sheet_to_json(sheet, { defval: '' }));
+                    } catch (err) { reject(err); }
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // Get value with partial matching (word-boundary aware)
+        // Get value - EXACT match first, then partial
+        function getValue(row, keys) {
+            for (const searchKey of keys) {
+                const exact = Object.keys(row).find(k => k.toLowerCase() === searchKey.toLowerCase());
+                if (exact && row[exact]) return row[exact];
+            }
+            for (const key of Object.keys(row)) {
+                const lowerKey = key.toLowerCase();
+                for (const searchKey of keys) {
+                    const lowerSearch = searchKey.toLowerCase();
+                    const pattern = new RegExp(`(^|[_\\s\\-→:>.]|\\s)${lowerSearch.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}([_\\s\\-→:>.]|\\s|$)`);
+                    if (pattern.test(lowerKey)) return row[key];
+                }
+            }
+            return '';
+        }
+
+        // Parse coordinate with degree/direction
+        function parseCoordinate(val) {
+            if (!val) return NaN;
+            let s = val.toString().replace(/[°�]/g, '').trim();
+            // Match decimal numbers: 50.12421000, -115.16605000, etc.
+            const match = s.match(/([-+]?\d+\.?\d*)/);
+            if (!match) return NaN;
+            let num = parseFloat(match[1].replace(',', '.'));
+            if (/[SW]/i.test(s)) num = -Math.abs(num);
+            return num;
+        }
+
+        // Parse return datetime: "Jan 27, 2026, 10:00 AM" OR "28/1/2026" (DD/MM/YYYY)
+        function parseReturnDateTime(val) {
+            if (!val) return null;
+            const s = val.toString().trim();
+
+            // Format 1: "Jan 27, 2026, 10:00 AM" (mit Zeit)
+            const months = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+            const match = s.match(/(\w+)\s+(\d+),?\s+(\d{4}),?\s+(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+            if (match) {
+                const month = months[match[1].toLowerCase().slice(0, 3)];
+                const day = parseInt(match[2]);
+                const year = parseInt(match[3]);
+                let hour = parseInt(match[4]);
+                const minute = parseInt(match[5]);
+                const ampm = (match[6] || '').toUpperCase();
+                if (ampm === 'PM' && hour < 12) hour += 12;
+                if (ampm === 'AM' && hour === 12) hour = 0;
+                return new Date(year, month, day, hour, minute);
+            }
+
+            // Format 2: "28/1/2026" oder "3/2/2026" (DD/MM/YYYY - europäisches Format ohne Zeit)
+            const ddmmyyyy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (ddmmyyyy) {
+                const day = parseInt(ddmmyyyy[1]);
+                const month = parseInt(ddmmyyyy[2]) - 1; // Monat ist 0-indexed
+                const year = parseInt(ddmmyyyy[3]);
+                // Setze Standard-Rückgabezeit auf 10:00 Uhr wenn keine Zeit angegeben
+                return new Date(year, month, day, 10, 0);
+            }
+
+            // Fallback: try native parsing
+            const d = new Date(s);
+            return isNaN(d.getTime()) ? null : d;
+        }
+
+        // Get timezone offset based on longitude (rough estimate)
+        function getTimezoneFromLon(lon) {
+            if (!Number.isFinite(lon)) return 'UTC';
+            const offset = Math.round(lon / 15);
+            if (offset === 0) return 'UTC';
+            return `UTC${offset >= 0 ? '+' : ''}${offset}`;
+        }
+
+        // Haversine distance
+        function haversine(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
+        // Classify based on distance AND required speed
+        function classify(distance, hasCoords, station, returnDeadline, gpsTimestamp) {
+            // Wenn keine GPS-Koordinaten, aber Station bekannt: Annahme = Fahrzeug ist bereits an der Station
+            if (!hasCoords && station) return { status: 'green', label: 'An Station' };
+            // Wenn weder GPS noch Station bekannt
+            if (!hasCoords || !station) return { status: 'unknown', label: '–' };
+
+            // Mit GPS-Koordinaten: Geschwindigkeits-basierte Klassifizierung
+            const now = new Date();
+
+            // Berechne benötigte Geschwindigkeit
+            let requiredSpeed = null;
+            if (returnDeadline) {
+                const timeRemainingMs = returnDeadline.getTime() - now.getTime();
+                const timeRemainingHours = timeRemainingMs / (60 * 60 * 1000);
+
+                if (timeRemainingHours > 0) {
+                    requiredSpeed = distance / timeRemainingHours;
+                }
+            }
+
+            // Rot: Braucht >200 km/h ODER >1000km
+            if ((requiredSpeed && requiredSpeed > 200) || distance >= 1000) {
+                return { status: 'red', label: `${distance.toFixed(0)} km ⚠` };
+            }
+
+            // Gelb: Braucht >150 km/h ODER >500km
+            if ((requiredSpeed && requiredSpeed > 150) || distance >= 500) {
+                return { status: 'yellow', label: `${distance.toFixed(0)} km ⚠` };
+            }
+
+            // Grün: Machbar mit realistischer Geschwindigkeit
+            return { status: 'green', label: `${distance.toFixed(0)} km ✓` };
+        }
+
+
+        // Render stats
+        function renderStats(results) {
+            const counts = { green: 0, yellow: 0, red: 0, unknown: 0 };
+            results.forEach(r => counts[r.status]++);
+
+            statsGrid.innerHTML = `
+        <div class="stat-card"><div class="stat-value">${results.length}</div><div class="stat-label">Gesamt</div></div>
+        <div class="stat-card green"><div class="stat-value">${counts.green}</div><div class="stat-label">Grün</div></div>
+        <div class="stat-card yellow"><div class="stat-value">${counts.yellow}</div><div class="stat-label">Gelb</div></div>
+        <div class="stat-card red"><div class="stat-value">${counts.red}</div><div class="stat-label">Rot</div></div>
+        <div class="stat-card unknown"><div class="stat-value">${counts.unknown}</div><div class="stat-label">Unbekannt</div></div>
+      `;
+            statsGrid.style.display = 'grid';
+        }
+
+        // Render table with sorting
+        const sortBy = document.getElementById('sortBy');
+
+        function renderTable(results) {
+            const filter = filterStatus.value;
+            let filtered = filter === 'all' ? [...results] : results.filter(r => r.status === filter);
+
+            // Sort
+            const sortMode = sortBy.value;
+            if (sortMode === 'distance-desc') {
+                filtered.sort((a, b) => (b.distanceNum || 0) - (a.distanceNum || 0));
+            } else if (sortMode === 'distance-asc') {
+                filtered.sort((a, b) => (a.distanceNum || Infinity) - (b.distanceNum || Infinity));
+            } else if (sortMode === 'station') {
+                filtered.sort((a, b) => a.station.localeCompare(b.station, 'de'));
+            } else if (sortMode === 'time') {
+                filtered.sort((a, b) => a.returnTimeHamburg.localeCompare(b.returnTimeHamburg));
+            } else { // status
+                const order = { red: 0, yellow: 1, green: 2, unknown: 3 };
+                filtered.sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
+            }
+
+            tableBody.innerHTML = filtered.map(r => `
+        <tr>
+          <td><span class="badge ${r.status}">${r.status.toUpperCase()}</span></td>
+          <td>${r.waveLink ? `<a href="${r.waveLink}" target="_blank" style="color: var(--teal); text-decoration: none;">↗ Wave</a>` : '–'}</td>
+          <td style="font-family: monospace; font-size: 0.8rem;">${r.vin}</td>
+          <td>${r.category}</td>
+          <td>${r.station}</td>
+          <td class="time-info"><span class="time">${r.returnTimeHamburg}</span></td>
+          <td>${r.distance}</td>
+          <td style="font-size: 0.8rem; color: var(--gray);">${r.gpsTime || '–'}</td>
+          <td style="font-size: 0.8rem; color: var(--gray);">${r.position}</td>
+        </tr>
+      `).join('');
+
+            tableCard.style.display = 'block';
+            emptyState.style.display = 'none';
+        }
+
+        // Filter/Sort change
+        filterStatus.addEventListener('change', () => renderTable(allResults));
+        sortBy.addEventListener('change', () => renderTable(allResults));
+
+        // Calculate
+        calculateBtn.addEventListener('click', async () => {
+            try {
+                debugPanel.innerHTML = '';
+                debugPanel.classList.add('show');
+                log('🚀 Berechnung gestartet...', 'success');
+
+                if (!vehicleFile.files[0]) throw new Error('Fahrzeug-Datei fehlt');
+
+                log(`📂 Lade ${vehicleFile.files[0].name}...`);
+                const vehicles = await parseFile(vehicleFile.files[0]);
+                log(`✓ ${vehicles.length} Fahrzeuge`, 'success');
+
+                // Use cached stations or load new
+                let stationMap;
+                if (stationsFile.files[0]) {
+                    log(`📂 Lade ${stationsFile.files[0].name}...`);
+                    const stations = await parseFile(stationsFile.files[0]);
+                    log(`✓ ${stations.length} Stationen`, 'success');
+
+                    // Build and cache station map
+                    stationMap = new Map();
+                    stations.forEach(s => {
+                        const key = (getValue(s, ['station_key', 'key', 'station']) || '').toString().toLowerCase().trim();
+                        // WICHTIG: Stations CSV Header sind FALSCH!
+                        // Header sagt: longitude,latitude
+                        // Aber Werte sind: latitude,longitude (Brussels = 50.76,4.25 nicht 4.25,50.76)
+                        const lat = parseFloat(getValue(s, ['longitude', 'lon'])); // Liest "longitude" Spalte → enthält LAT!
+                        const lon = parseFloat(getValue(s, ['latitude', 'lat']));  // Liest "latitude" Spalte → enthält LON!
+                        if (key && !isNaN(lat) && !isNaN(lon)) {
+                            stationMap.set(key, { lat, lon });
+                        }
+                    });
+                    cachedStationMap = stationMap;
+                    cachedStationFileName = stationsFile.files[0].name;
+                    log(`🗺️ ${stationMap.size} Stationen indexiert und gecached`, 'info');
+                } else if (cachedStationMap) {
+                    stationMap = cachedStationMap;
+                    log(`🗺️ Verwende gecachte Stationen (${cachedStationFileName}): ${stationMap.size}`, 'info');
+                } else {
+                    throw new Error('Bitte Stations-Datei laden!');
+                }
+
+                // Process vehicles
+                // Supports both formats:
+                // 1. Bookings_Return_Today.csv (ohne GPS): vehicle_id, station, Booking Return Date, LINK TO WAVE
+                // 2. bookings_return_today_with_gnss.csv (mit GPS): TCU_Data - vin → vin, station_return, return_datetime, gnss_latitude, etc.
+                allResults = vehicles.map((v, idx) => {
+                    // VIN: Prüfe verschiedene Spaltennamen inkl. "TCU_Data - vin → vin"
+                    const vin = getValue(v, ['vin', 'vehicle_id', 'vehicle_vin', 'tcu_data']) || '';
+                    const category = getValue(v, ['vehicle_category', 'category', 'car_category']) || '';
+                    // Station: WICHTIG - Nur Return Station, NICHT Pickup! (One-Way Rentals!)
+                    // Priorisiere explizit Return-Spalten und schließe Pickup aus
+                    const stationName = getValue(v, [
+                        'station_return',      // GNSS CSV - höchste Priorität
+                        'return_station',
+                        'dropoff_station',
+                        'end_station',
+                        'booking end station',
+                        'station'              // Nur als Fallback wenn keine Return-Spalte
+                    ]) || '';
+                    // Datum: return_datetime (mit GPS) ODER Booking Return Date (ohne GPS)
+                    const returnDateTimeRaw = getValue(v, ['return_datetime', 'booking return date', 'return_date', 'booking_end_date', 'end_date', 'dropoff_date']);
+
+                    // Parse return time early so we can use it in classify()
+                    const returnDateLocal = parseReturnDateTime(returnDateTimeRaw);
+
+                    // Wave Link: Entweder direkt aus LINK TO WAVE oder aus car_id generiert
+                    const waveUrl = getValue(v, ['link to wave', 'wave_link', 'wave']) || '';
+                    let carId = '';
+                    if (waveUrl) {
+                        // Extrahiere ID aus URL wie https://backoffice.roadsurfer.com/vehicles/5154/edit
+                        const match = waveUrl.toString().match(/vehicles\/(\d+)/);
+                        carId = match ? match[1] : '';
+                    }
+                    if (!carId) {
+                        // WICHTIG: Nutze car_id (NICHT tcu_id!)
+                        // Suche explizit nach car_id Spalte, entferne Formatierung (Kommas, Quotes)
+                        const carIdRaw = getValue(v, ['car_id', 'car id']) || '';
+                        carId = carIdRaw.toString().replace(/[,"]/g, '').trim();
+                    }
+
+
+                    // GPS: gnss_latitude/gnss_longitude (mit GPS Format) - nicht vorhanden in Bookings_Return_Today.csv
+                    const latRaw = getValue(v, ['gnss_latitude', 'latitude', 'lat', 'vehicle_lat', 'current_lat']);
+                    const lonRaw = getValue(v, ['gnss_longitude', 'longitude', 'lon', 'lng', 'vehicle_lon', 'vehicle_lng', 'current_lon', 'current_lng']);
+                    const lat = parseCoordinate(latRaw);
+                    const lon = parseCoordinate(lonRaw);
+
+                    // GPS Timestamp: Wann wurde der GPS-Punkt aufgezeichnet?
+                    const gpsTimestampRaw = getValue(v, [
+                        'gnss_latitude_updated_datetime',
+                        'gnss_longitude_updated_datetime',
+                        'tcu_updated_datetime',
+                        'gps_timestamp',
+                        'tcu updated datetime'
+                    ]);
+                    const gpsTimestamp = parseReturnDateTime(gpsTimestampRaw);
+
+                    const station = stationMap.get(stationName.toLowerCase().trim());
+                    const hasCoords = !isNaN(lat) && !isNaN(lon);
+
+                    let distance = null;
+                    if (station && hasCoords) {
+                        distance = haversine(station.lat, station.lon, lat, lon);
+                    }
+
+                    // Debug first 3 vehicles
+                    if (idx < 3) {
+                        log(`🚗 Vehicle ${idx + 1}:`, 'info');
+                        log(`  VIN: ${vin}`, 'info');
+
+                        // Debug station selection for One-Way detection
+                        const pickupStation = getValue(v, ['station_pickup', 'pickup_station', 'start_station']);
+                        if (pickupStation && pickupStation.toLowerCase() !== stationName.toLowerCase()) {
+                            log(`  ⚠️ ONE-WAY: Pickup="${pickupStation}" → Return="${stationName}"`, 'info');
+                        } else {
+                            log(`  Station: "${stationName}"`, 'info');
+                        }
+
+                        log(`  Station Name Raw: "${stationName}"`, 'info');
+                        log(`  Station: "${stationName}" → ${station ? 'FOUND' : 'NOT FOUND'}`, station ? 'success' : 'error');
+                        log(`  GPS Raw: lat="${latRaw}", lon="${lonRaw}"`, 'info');
+                        log(`  GPS Parsed: lat=${lat}, lon=${lon}`, 'info');
+                        log(`  hasCoords: ${hasCoords}`, hasCoords ? 'success' : 'error');
+                        if (station) {
+                            log(`  Station coords: lat=${station.lat}, lon=${station.lon}`, 'info');
+                        }
+                        if (distance !== null) {
+                            log(`  Distance: ${distance.toFixed(2)} km`, 'success');
+                        } else {
+                            log(`  Distance: NOT CALCULATED`, 'error');
+                        }
+                    }
+
+                    // Format GPS timestamp for display
+                    let gpsTimeFormatted = '–';
+                    if (gpsTimestamp) {
+                        gpsTimeFormatted = gpsTimestamp.toLocaleString('de-DE', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                    }
+
+                    const classification = classify(distance, hasCoords, station, returnDateLocal, gpsTimestamp);
+
+                    // Return time is already parsed above as returnDateLocal
+
+                    let returnTimeHamburg = '–';
+                    let dayOffset = '';
+                    let dateOnly = false; // Flag to check if only date was provided (no time)
+
+                    // Check if the original value was DD/MM/YYYY format (no time info)
+                    if (returnDateTimeRaw && returnDateTimeRaw.toString().match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
+                        dateOnly = true;
+                    }
+
+                    if (returnDateLocal && station && !dateOnly) {
+                        // Estimate station timezone offset from longitude (rough: 1 hour per 15 degrees)
+                        const stationTzOffset = Math.round(station.lon / 15); // e.g. LA = -8, Frankfurt = +1
+                        const germanTzOffset = 1; // Germany is UTC+1 (winter) or UTC+2 (summer)
+
+                        // Convert: add difference between station and German timezone
+                        const hourDiff = germanTzOffset - stationTzOffset;
+                        const germanDate = new Date(returnDateLocal.getTime() + hourDiff * 60 * 60 * 1000);
+
+                        // Check if day changed
+                        const localDay = returnDateLocal.getDate();
+                        const germanDay = germanDate.getDate();
+                        if (germanDay > localDay) dayOffset = ' (+1)';
+                        else if (germanDay < localDay) dayOffset = ' (-1)';
+
+                        returnTimeHamburg = germanDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + dayOffset;
+                    } else if (returnDateLocal && !dateOnly) {
+                        // No station coords, just show the time as-is
+                        returnTimeHamburg = returnDateLocal.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                    } else if (returnDateLocal && dateOnly) {
+                        // Only date available, show formatted date
+                        returnTimeHamburg = returnDateLocal.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    }
+
+                    // Wave link: Nutze originale URL wenn vorhanden, sonst generiere aus car_id
+                    const waveLink = waveUrl || (carId ? `https://backoffice.roadsurfer.com/vehicles/${carId}/edit` : '');
+
+
+                    // Additional debug for Wave link (after waveLink is created)
+                    if (idx < 3) {
+                        log(`  Wave URL from CSV: "${waveUrl}"`, 'info');
+                        log(`  Car ID: "${carId}"`, 'info');
+                        log(`  Final Wave Link: "${waveLink}"`, 'info');
+                    }
+
+                    if (idx < 3) {
+                        log(`📍 ${vin.slice(-8)}: ${stationName} @ ${returnTimeHamburg} → ${classification.label}`, 'info');
+                    }
+
+                    return {
+                        vin,
+                        category,
+                        station: capitalize(stationName),
+                        returnTimeHamburg,
+                        waveLink,
+                        distance: classification.label,
+                        distanceNum: distance,
+                        gpsTime: gpsTimeFormatted,
+                        position: hasCoords ? `${lat.toFixed(4)}, ${lon.toFixed(4)}` : '–',
+                        status: classification.status
+                    };
+                });
+
+                log(`✅ Fertig: ${allResults.length} Fahrzeuge verarbeitet`, 'success');
+
+                renderStats(allResults);
+                renderTable(allResults);
+
+            } catch (err) {
+                log(`❌ ${err.message}`, 'error');
+                console.error(err);
+            }
+        });
+
+        log('✓ App bereit', 'success');
+    </script>
+</body>
+
+</html>
